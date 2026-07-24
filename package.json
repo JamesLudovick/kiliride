@@ -1,0 +1,23 @@
+{
+  "name": "kiliride-management-system",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Docker-based monorepo for KiliRide Management System.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "docker compose up --build",
+    "dev:detached": "docker compose up --build -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "db:migrate": "npm --workspace apps/api run prisma:migrate",
+    "db:studio": "npm --workspace apps/api run prisma:studio",
+    "lint": "npm --workspaces run lint",
+    "typecheck": "npm --workspaces run typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
