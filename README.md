@@ -1,6 +1,6 @@
 # KiliRide Management System
 
-KiliRide Management System is a Docker-based monorepo for one Moshi-based car rental and transport company. This initial scaffold prepares the foundation for a React + TypeScript customer/admin web app, a NestJS API, PostgreSQL, Prisma ORM, Tailwind CSS, and future shadcn/ui components.
+KiliRide Management System is a Docker-based monorepo for one Moshi-based car rental and transport company. This includes React + TypeScript customer/admin web app, a NestJS API, PostgreSQL, Prisma ORM, Tailwind CSS, and future shadcn/ui components.
 
 ## What Is Included
 
