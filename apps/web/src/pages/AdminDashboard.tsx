@@ -33,7 +33,7 @@ const stats = [
   { label: "Revenue today", value: "TZS 0", hint: "Payments not connected yet" }
 ];
 
-export function AdminPage() {
+export function AdminDashboard() {
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [status, setStatus] = useState("Checking session...");
 

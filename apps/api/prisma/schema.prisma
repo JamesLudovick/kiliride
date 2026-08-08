@@ -55,6 +55,7 @@ model DriverProfile {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   licenseNumber String
   availability  String   @default("AVAILABLE")
+  vehicle Vehicle?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -71,4 +72,37 @@ model Session {
   createdAt    DateTime @default(now())
 
   @@map("sessions")
+}
+
+enum VehicleType {
+  SEDAN
+  SUV
+  VAN
+  PICKUP
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  ON_TRIP
+  MAINTENANCE
+  INACTIVE
+}
+
+model Vehicle {
+  id                 String          @id @default(cuid())
+  registrationNumber String          @unique
+  make               String
+  model              String
+  year               Int
+  color              String?
+  type               VehicleType
+  status             VehicleStatus  @default(AVAILABLE)
+
+  driverId           String?         @unique
+  driver             DriverProfile?  @relation(fields: [driverId], references: [id])
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@map("vehicles")
 }
