@@ -1,11 +1,13 @@
-import { IsEnum, IsInt, IsOptional, IsString, Length } from "class-validator";
-
-export enum VehicleType {
-  SEDAN = "SEDAN",
-  SUV = "SUV",
-  VAN = "VAN",
-  PICKUP = "PICKUP"
-}
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+} from "class-validator";
+import { VehicleType } from "@prisma/client";
 
 export class CreateVehicleDto {
   @IsString()
@@ -13,16 +15,21 @@ export class CreateVehicleDto {
   registrationNumber: string;
 
   @IsString()
+  @Length(2, 50)
   make: string;
 
   @IsString()
+  @Length(1, 50)
   model: string;
 
   @IsInt()
+  @Min(1900)
+  @Max(2100)
   year: number;
 
   @IsOptional()
   @IsString()
+  @Length(1, 30)
   color?: string;
 
   @IsEnum(VehicleType)

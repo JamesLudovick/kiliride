@@ -1,6 +1,7 @@
 import { PublicHome } from "./components/PublicHome";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { StaffDashboard } from "./pages/StaffDashboard";
+import { VehiclesPage } from "./pages/VehiclesPage";
 import { LoginPage } from "./pages/LoginPage";
 import { getStoredUser } from "./lib/auth";
 
@@ -10,6 +11,15 @@ function App() {
 
   if (path.startsWith("/login")) {
     return <LoginPage />;
+  }
+
+  if (path.startsWith("/dashboard/vehicles")) {
+    if (!user) {
+      window.location.href = "/login";
+      return null;
+    }
+
+    return <VehiclesPage />;
   }
 
   if (path.startsWith("/dashboard")) {
