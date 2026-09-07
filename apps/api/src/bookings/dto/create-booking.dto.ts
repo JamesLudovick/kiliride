@@ -1,5 +1,7 @@
+import { ServiceType } from "@prisma/client";
 import {
   IsDateString,
+  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -10,6 +12,9 @@ import {
 export class CreateBookingDto {
   @IsString()
   customerId: string;
+
+  @IsEnum(ServiceType)
+  serviceType: ServiceType;
 
   @IsOptional()
   @IsString()

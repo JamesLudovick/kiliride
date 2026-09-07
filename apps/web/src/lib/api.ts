@@ -310,6 +310,17 @@ export type PaymentStatus =
   | "PARTIALLY_PAID"
   | "PAID";
 
+
+export type BookingServiceType =
+  | "AIRPORT_TRANSFER"
+  | "SELF_DRIVE"
+  | "CHAUFFEUR"
+  | "SAFARI"
+  | "CORPORATE"
+  | "WEDDING_EVENT"
+  | "OTHER";
+
+
 export interface Booking {
   id: string;
   referenceNumber: string;
@@ -322,6 +333,7 @@ export interface Booking {
   dropoffDate: string;
   passengerCount: number;
   fare: string | number;
+  serviceType: BookingServiceType;
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   notes: string | null;
@@ -348,6 +360,7 @@ export interface Booking {
 
 export interface CreateBookingInput {
   customerId: string;
+  serviceType: BookingServiceType;
   driverId?: string;
   vehicleId?: string;
   pickupLocation: string;

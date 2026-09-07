@@ -8,6 +8,7 @@ import {
   BookingStatus,
   DriverAvailability,
   Prisma,
+  ServiceType,
   VehicleStatus,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -19,6 +20,10 @@ import { UpdatePaymentStatusDto } from "./dto/update-payment-status.dto";
 @Injectable()
 export class BookingsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private normalizeServiceType(serviceType: ServiceType) {
+    return serviceType;
+  }
 
   private async ensureCustomer(customerId: string) {
     const customer = await this.prisma.customerProfile.findUnique({
@@ -258,6 +263,7 @@ export class BookingsService {
           dropoffDate,
           passengerCount: dto.passengerCount,
           fare: new Prisma.Decimal(dto.fare),
+          serviceType: this.normalizeServiceType(dto.serviceType),
           notes: dto.notes?.trim() || null,
           status:
             dto.driverId || dto.vehicleId
@@ -372,6 +378,9 @@ export class BookingsService {
         }),
         ...(dto.fare !== undefined && {
           fare: new Prisma.Decimal(dto.fare),
+        }),
+        ...(dto.serviceType !== undefined && {
+          serviceType: this.normalizeServiceType(dto.serviceType),
         }),
         ...(dto.notes !== undefined && {
           notes: dto.notes.trim() || null,

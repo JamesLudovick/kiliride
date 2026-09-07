@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import {
   Booking,
+  BookingServiceType,
   BookingStatus,
   Customer,
   Driver,
@@ -43,6 +44,17 @@ const paymentLabels: Record<PaymentStatus, string> = {
   PARTIALLY_PAID: "Partially paid",
   PAID: "Paid",
 };
+
+const serviceTypeLabels: Record<BookingServiceType, string> = {
+  AIRPORT_TRANSFER: "Airport Transfer",
+  SELF_DRIVE: "Self Drive",
+  CHAUFFEUR: "Chauffeur",
+  SAFARI: "Safari / Tour",
+  CORPORATE: "Corporate",
+  WEDDING_EVENT: "Wedding / Event",
+  OTHER: "Other",
+};
+
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-TZ", {
@@ -103,6 +115,8 @@ export function BookingsPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
+  const [serviceType, setServiceType] =
+    useState<BookingServiceType>("AIRPORT_TRANSFER");
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
   const [customerSaving, setCustomerSaving] = useState(false);
   const [quickCustomerError, setQuickCustomerError] = useState("");
@@ -152,6 +166,7 @@ export function BookingsPage() {
 
   function resetForm() {
     setCustomerId("");
+    setServiceType("AIRPORT_TRANSFER");
     setShowQuickCustomer(false);
     setQuickCustomerError("");
     setNewCustomerName("");
@@ -229,6 +244,7 @@ export function BookingsPage() {
     try {
       await createBooking({
         customerId,
+        serviceType,
         ...(driverId ? { driverId } : {}),
         ...(vehicleId ? { vehicleId } : {}),
         pickupLocation,
@@ -323,6 +339,9 @@ export function BookingsPage() {
         !query ||
         booking.referenceNumber.toLowerCase().includes(query) ||
         customerName.toLowerCase().includes(query) ||
+        serviceTypeLabels[booking.serviceType]
+          .toLowerCase()
+          .includes(query) ||
         booking.pickupLocation.toLowerCase().includes(query) ||
         booking.destination.toLowerCase().includes(query);
 
@@ -517,7 +536,7 @@ export function BookingsPage() {
             onSubmit={handleCreate}
             className="grid gap-x-5 gap-y-5 p-5 sm:p-6 lg:grid-cols-12"
           >
-            <div className="lg:col-span-6">
+            <div className="lg:col-span-4">
               <div className="mb-1.5 flex items-center justify-between gap-3">
                 <label
                   htmlFor="booking-customer"
@@ -697,6 +716,32 @@ export function BookingsPage() {
                 </div>
               )}
             </div>
+
+            <label className="kr-label lg:col-span-2">
+              Service type *
+              <select
+                required
+                value={serviceType}
+                onChange={(event) =>
+                  setServiceType(
+                    event.target.value as BookingServiceType,
+                  )
+                }
+                className="kr-select"
+              >
+                {Object.entries(serviceTypeLabels).map(
+                  ([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ),
+                )}
+              </select>
+
+              <span className="kr-help">
+                Type of transport service.
+              </span>
+            </label>
 
             <label className="kr-label lg:col-span-3">
               Driver
@@ -990,6 +1035,10 @@ export function BookingsPage() {
                       <p className="font-bold text-slate-900">
                         {booking.referenceNumber}
                       </p>
+
+                      <span className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
+                        {serviceTypeLabels[booking.serviceType]}
+                      </span>
 
                       <div className="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
                         <UsersRound size={13} />
