@@ -286,10 +286,7 @@ export class BookingsService {
               : null,
 
           notes: dto.notes?.trim() || null,
-          status:
-            dto.driverId || dto.vehicleId
-              ? BookingStatus.ASSIGNED
-              : BookingStatus.PENDING,
+          status: BookingStatus.PENDING,
         },
         include: {
           customer: {
@@ -324,11 +321,12 @@ export class BookingsService {
     const existing = await this.findOne(id);
 
     if (
+      existing.status === BookingStatus.IN_PROGRESS ||
       existing.status === BookingStatus.COMPLETED ||
       existing.status === BookingStatus.CANCELLED
     ) {
       throw new BadRequestException(
-        "Completed or cancelled bookings cannot be edited.",
+        "In-progress, completed or cancelled bookings cannot be edited.",
       );
     }
 
@@ -352,7 +350,26 @@ export class BookingsService {
       );
     }
 
-    if (dto.driverId !== undefined && dto.driverId !== null) {
+    const resultingDriverId =
+      dto.driverId !== undefined
+        ? dto.driverId || null
+        : existing.driverId;
+
+    const resultingVehicleId =
+      dto.vehicleId !== undefined
+        ? dto.vehicleId || null
+        : existing.vehicleId;
+
+    if (
+      existing.status === BookingStatus.ASSIGNED &&
+      (!resultingDriverId || !resultingVehicleId)
+    ) {
+      throw new BadRequestException(
+        "An assigned booking must have both a driver and vehicle.",
+      );
+    }
+
+    if (dto.driverId) {
       await this.ensureDriverAvailable(
         dto.driverId,
         pickupDate,
@@ -361,7 +378,7 @@ export class BookingsService {
       );
     }
 
-    if (dto.vehicleId !== undefined && dto.vehicleId !== null) {
+    if (dto.vehicleId) {
       await this.ensureVehicleAvailable(
         dto.vehicleId,
         pickupDate,
@@ -438,72 +455,115 @@ export class BookingsService {
   ) {
     const booking = await this.findOne(id);
 
-    if (
-      booking.status === BookingStatus.COMPLETED ||
-      booking.status === BookingStatus.CANCELLED
-    ) {
+    const allowedTransitions: Record<
+      BookingStatus,
+      BookingStatus[]
+    > = {
+      [BookingStatus.PENDING]: [
+        BookingStatus.CONFIRMED,
+        BookingStatus.CANCELLED,
+      ],
+
+      [BookingStatus.CONFIRMED]: [
+        BookingStatus.ASSIGNED,
+        BookingStatus.CANCELLED,
+      ],
+
+      [BookingStatus.ASSIGNED]: [
+        BookingStatus.IN_PROGRESS,
+        BookingStatus.CANCELLED,
+      ],
+
+      [BookingStatus.IN_PROGRESS]: [
+        BookingStatus.COMPLETED,
+      ],
+
+      [BookingStatus.COMPLETED]: [],
+      [BookingStatus.CANCELLED]: [],
+    };
+
+    const allowed =
+      allowedTransitions[booking.status].includes(dto.status);
+
+    if (!allowed) {
       throw new BadRequestException(
-        "Completed or cancelled bookings cannot change status.",
+        `Booking cannot move from ${booking.status} to ${dto.status}.`,
       );
     }
 
-    if (dto.status === BookingStatus.IN_PROGRESS) {
+    if (
+      dto.status === BookingStatus.ASSIGNED ||
+      dto.status === BookingStatus.IN_PROGRESS
+    ) {
       if (!booking.driverId) {
         throw new BadRequestException(
-          "A driver must be assigned before starting the trip.",
+          "A driver must be assigned before this booking can continue.",
         );
       }
 
       if (!booking.vehicleId) {
         throw new BadRequestException(
-          "A vehicle must be assigned before starting the trip.",
+          "A vehicle must be assigned before this booking can continue.",
         );
       }
+
+      await this.ensureDriverAvailable(
+        booking.driverId,
+        booking.pickupDate,
+        booking.dropoffDate,
+        booking.id,
+      );
+
+      await this.ensureVehicleAvailable(
+        booking.vehicleId,
+        booking.pickupDate,
+        booking.dropoffDate,
+        booking.id,
+      );
     }
 
-    const updated = await this.prisma.booking.update({
-      where: { id },
-      data: {
-        status: dto.status,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id },
+        data: {
+          status: dto.status,
+        },
+      });
+
+      if (dto.status === BookingStatus.IN_PROGRESS) {
+        await tx.driverProfile.update({
+          where: { id: booking.driverId! },
+          data: {
+            availability: DriverAvailability.ON_TRIP,
+          },
+        });
+
+        await tx.vehicle.update({
+          where: { id: booking.vehicleId! },
+          data: {
+            status: VehicleStatus.ON_TRIP,
+          },
+        });
+      }
+
+      if (dto.status === BookingStatus.COMPLETED) {
+        await tx.driverProfile.update({
+          where: { id: booking.driverId! },
+          data: {
+            availability: DriverAvailability.AVAILABLE,
+          },
+        });
+
+        await tx.vehicle.update({
+          where: { id: booking.vehicleId! },
+          data: {
+            status: VehicleStatus.AVAILABLE,
+          },
+        });
+      }
+
+      return updated;
     });
-
-    if (dto.status === BookingStatus.IN_PROGRESS) {
-      if (booking.driverId) {
-        await this.prisma.driverProfile.update({
-          where: { id: booking.driverId },
-          data: { availability: DriverAvailability.ON_TRIP },
-        });
-      }
-
-      if (booking.vehicleId) {
-        await this.prisma.vehicle.update({
-          where: { id: booking.vehicleId },
-          data: { status: VehicleStatus.ON_TRIP },
-        });
-      }
-    }
-
-    if (
-      dto.status === BookingStatus.COMPLETED ||
-      dto.status === BookingStatus.CANCELLED
-    ) {
-      if (booking.driverId) {
-        await this.prisma.driverProfile.update({
-          where: { id: booking.driverId },
-          data: { availability: DriverAvailability.AVAILABLE },
-        });
-      }
-
-      if (booking.vehicleId) {
-        await this.prisma.vehicle.update({
-          where: { id: booking.vehicleId },
-          data: { status: VehicleStatus.AVAILABLE },
-        });
-      }
-    }
-
-    return updated;
   }
 
   async updatePaymentStatus(

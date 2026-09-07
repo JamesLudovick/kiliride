@@ -387,6 +387,9 @@ export interface CreateBookingInput {
   notes?: string;
 }
 
+export type UpdateBookingInput = Partial<CreateBookingInput>;
+
+
 export function getCustomers() {
   return authenticatedRequest<Customer[]>("/customers");
 }

@@ -27,6 +27,7 @@ import {
   getCustomers,
   getDrivers,
   getVehicles,
+  updateBooking,
   updateBookingPaymentStatus,
   updateBookingStatus,
 } from "../lib/api";
@@ -100,6 +101,42 @@ function paymentClass(status: PaymentStatus) {
   }
 }
 
+
+const nextBookingAction: Partial<
+  Record<
+    BookingStatus,
+    {
+      status: BookingStatus;
+      label: string;
+    }
+  >
+> = {
+  PENDING: {
+    status: "CONFIRMED",
+    label: "Confirm",
+  },
+  CONFIRMED: {
+    status: "ASSIGNED",
+    label: "Mark assigned",
+  },
+  ASSIGNED: {
+    status: "IN_PROGRESS",
+    label: "Start trip",
+  },
+  IN_PROGRESS: {
+    status: "COMPLETED",
+    label: "Complete trip",
+  },
+};
+
+function canCancelBooking(status: BookingStatus) {
+  return (
+    status === "PENDING" ||
+    status === "CONFIRMED" ||
+    status === "ASSIGNED"
+  );
+}
+
 export function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -108,6 +145,16 @@ export function BookingsPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] =
+    useState<string | null>(null);
+
+  const [resourceEditingId, setResourceEditingId] =
+    useState<string | null>(null);
+  const [resourceDriverId, setResourceDriverId] = useState("");
+  const [resourceVehicleId, setResourceVehicleId] = useState("");
+  const [resourceSavingId, setResourceSavingId] =
+    useState<string | null>(null);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -296,21 +343,72 @@ export function BookingsPage() {
     }
   }
 
+  function openResourceEditor(booking: Booking) {
+    if (resourceEditingId === booking.id) {
+      setResourceEditingId(null);
+      return;
+    }
+
+    setResourceEditingId(booking.id);
+    setResourceDriverId(booking.driverId ?? "");
+    setResourceVehicleId(booking.vehicleId ?? "");
+    setError("");
+    setSuccess("");
+  }
+
+  async function handleResourceSave(booking: Booking) {
+    setError("");
+    setSuccess("");
+    setResourceSavingId(booking.id);
+
+    try {
+      await updateBooking(booking.id, {
+        driverId: resourceDriverId,
+        vehicleId: resourceVehicleId,
+      });
+
+      setSuccess(
+        `Resources updated for ${booking.referenceNumber}.`,
+      );
+
+      setResourceEditingId(null);
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update booking resources.",
+      );
+    } finally {
+      setResourceSavingId(null);
+    }
+  }
+
   async function handleStatusChange(
     booking: Booking,
     status: BookingStatus,
   ) {
     setError("");
     setSuccess("");
+    setStatusUpdatingId(booking.id);
 
     try {
       await updateBookingStatus(booking.id, status);
-      setSuccess(`${booking.referenceNumber} is now ${statusLabels[status]}.`);
+      setResourceEditingId(null);
+
+      setSuccess(
+        `${booking.referenceNumber} is now ${statusLabels[status]}.`,
+      );
+
       await loadData();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to update booking status.",
+        err instanceof Error
+          ? err.message
+          : "Failed to update booking status.",
       );
+    } finally {
+      setStatusUpdatingId(null);
     }
   }
 
@@ -345,6 +443,7 @@ export function BookingsPage() {
 
     setError("");
     setSuccess("");
+    setStatusUpdatingId(booking.id);
 
     try {
       await cancelBooking(booking.id);
@@ -352,8 +451,12 @@ export function BookingsPage() {
       await loadData();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to cancel booking.",
+        err instanceof Error
+          ? err.message
+          : "Failed to cancel booking.",
       );
+    } finally {
+      setStatusUpdatingId(null);
     }
   }
 
@@ -1239,28 +1342,13 @@ export function BookingsPage() {
                     </td>
 
                     <td className="px-5 py-4">
-                      <select
-                        value={booking.status}
-                        disabled={
-                          booking.status === "COMPLETED" ||
-                          booking.status === "CANCELLED"
-                        }
-                        onChange={(event) =>
-                          void handleStatusChange(
-                            booking,
-                            event.target.value as BookingStatus,
-                          )
-                        }
-                        className={`rounded-full border-0 px-2.5 py-1.5 text-xs font-bold outline-none ${statusClass(
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1.5 text-xs font-bold ${statusClass(
                           booking.status,
                         )}`}
                       >
-                        {Object.entries(statusLabels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                        {statusLabels[booking.status]}
+                      </span>
                     </td>
 
                     <td className="px-5 py-4">
@@ -1286,17 +1374,269 @@ export function BookingsPage() {
                       </select>
                     </td>
 
-                    <td className="px-5 py-4 text-right">
-                      {booking.status !== "COMPLETED" &&
-                        booking.status !== "CANCELLED" && (
-                          <button
-                            type="button"
-                            onClick={() => void handleCancel(booking)}
-                            className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 hover:text-red-700"
-                          >
-                            Cancel
-                          </button>
-                        )}
+                    <td className="px-5 py-4 align-top">
+                      {(() => {
+                        const nextAction =
+                          nextBookingAction[booking.status];
+
+                        const isUpdating =
+                          statusUpdatingId === booking.id;
+
+                        const isResourceSaving =
+                          resourceSavingId === booking.id;
+
+                        const resourcesReady = Boolean(
+                          booking.driverId && booking.vehicleId,
+                        );
+
+                        const needsResources =
+                          nextAction?.status === "ASSIGNED";
+
+                        const nextActionDisabled =
+                          isUpdating ||
+                          isResourceSaving ||
+                          (needsResources && !resourcesReady);
+
+                        const canManageResources =
+                          booking.status === "PENDING" ||
+                          booking.status === "CONFIRMED" ||
+                          booking.status === "ASSIGNED";
+
+                        const resourceEditorOpen =
+                          resourceEditingId === booking.id;
+
+                        const hasAnyResource =
+                          Boolean(
+                            booking.driverId || booking.vehicleId,
+                          );
+
+                        const assignedNeedsBoth =
+                          booking.status === "ASSIGNED";
+
+                        const resourceSaveDisabled =
+                          isResourceSaving ||
+                          (
+                            assignedNeedsBoth &&
+                            (
+                              !resourceDriverId ||
+                              !resourceVehicleId
+                            )
+                          );
+
+                        return (
+                          <div className="flex min-w-[190px] flex-col items-end gap-2">
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                              {nextAction && (
+                                <button
+                                  type="button"
+                                  disabled={nextActionDisabled}
+                                  onClick={() =>
+                                    void handleStatusChange(
+                                      booking,
+                                      nextAction.status,
+                                    )
+                                  }
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[11px] font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                                >
+                                  {isUpdating ? (
+                                    <Loader2
+                                      size={13}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <CheckCircle2 size={13} />
+                                  )}
+
+                                  {nextAction.label}
+                                </button>
+                              )}
+
+                              {canManageResources && (
+                                <button
+                                  type="button"
+                                  disabled={
+                                    isUpdating ||
+                                    isResourceSaving
+                                  }
+                                  onClick={() =>
+                                    openResourceEditor(booking)
+                                  }
+                                  className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-primary disabled:opacity-40"
+                                >
+                                  {resourceEditorOpen
+                                    ? "Close"
+                                    : hasAnyResource
+                                      ? "Change resources"
+                                      : "Assign resources"}
+                                </button>
+                              )}
+
+                              {canCancelBooking(booking.status) && (
+                                <button
+                                  type="button"
+                                  disabled={
+                                    isUpdating ||
+                                    isResourceSaving
+                                  }
+                                  onClick={() =>
+                                    void handleCancel(booking)
+                                  }
+                                  className="h-8 rounded-lg px-2.5 text-[11px] font-bold text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+
+                              {booking.status === "COMPLETED" && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                  <CheckCircle2 size={14} />
+                                  Journey finished
+                                </span>
+                              )}
+
+                              {booking.status === "CANCELLED" && (
+                                <span className="text-[11px] font-bold text-slate-400">
+                                  Booking closed
+                                </span>
+                              )}
+                            </div>
+
+                            {needsResources && !resourcesReady && (
+                              <p className="max-w-[190px] text-right text-[10px] leading-4 text-amber-600">
+                                Assign both a driver and vehicle first.
+                              </p>
+                            )}
+
+                            {resourceEditorOpen &&
+                              canManageResources && (
+                                <div className="w-[260px] rounded-xl border border-slate-200 bg-slate-50 p-3 text-left shadow-sm">
+                                  <p className="text-xs font-bold text-slate-900">
+                                    Trip resources
+                                  </p>
+
+                                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                                    Assign the driver and vehicle before
+                                    starting this journey.
+                                  </p>
+
+                                  <label className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                    Driver
+                                  </label>
+
+                                  <select
+                                    value={resourceDriverId}
+                                    onChange={(event) =>
+                                      setResourceDriverId(
+                                        event.target.value,
+                                      )
+                                    }
+                                    className="kr-select mt-1 bg-white text-xs"
+                                  >
+                                    <option value="">
+                                      Unassigned
+                                    </option>
+
+                                    {drivers.map((driver) => (
+                                      <option
+                                        key={driver.id}
+                                        value={driver.id}
+                                        disabled={
+                                          driver.availability !==
+                                            "AVAILABLE" &&
+                                          driver.id !==
+                                            resourceDriverId
+                                        }
+                                      >
+                                        {driver.name} —{" "}
+                                        {driver.availability}
+                                      </option>
+                                    ))}
+                                  </select>
+
+                                  <label className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                    Vehicle
+                                  </label>
+
+                                  <select
+                                    value={resourceVehicleId}
+                                    onChange={(event) =>
+                                      setResourceVehicleId(
+                                        event.target.value,
+                                      )
+                                    }
+                                    className="kr-select mt-1 bg-white text-xs"
+                                  >
+                                    <option value="">
+                                      Unassigned
+                                    </option>
+
+                                    {vehicles.map((vehicle) => (
+                                      <option
+                                        key={vehicle.id}
+                                        value={vehicle.id}
+                                        disabled={
+                                          vehicle.status !==
+                                            "AVAILABLE" &&
+                                          vehicle.id !==
+                                            resourceVehicleId
+                                        }
+                                      >
+                                        {vehicle.registrationNumber}
+                                        {" — "}
+                                        {vehicle.make}{" "}
+                                        {vehicle.model}
+                                      </option>
+                                    ))}
+                                  </select>
+
+                                  {assignedNeedsBoth &&
+                                    (
+                                      !resourceDriverId ||
+                                      !resourceVehicleId
+                                    ) && (
+                                      <p className="mt-2 text-[10px] leading-4 text-amber-600">
+                                        An assigned booking must keep
+                                        both resources.
+                                      </p>
+                                    )}
+
+                                  <div className="mt-3 flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isResourceSaving}
+                                      onClick={() =>
+                                        setResourceEditingId(null)
+                                      }
+                                      className="h-8 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-white"
+                                    >
+                                      Cancel
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={resourceSaveDisabled}
+                                      onClick={() =>
+                                        void handleResourceSave(
+                                          booking,
+                                        )
+                                      }
+                                      className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[11px] font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                                    >
+                                      {isResourceSaving && (
+                                        <Loader2
+                                          size={12}
+                                          className="animate-spin"
+                                        />
+                                      )}
+
+                                      Save resources
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}
