@@ -22,6 +22,10 @@ const pageDetails: Record<
     title: "Customers",
     description: "Manage customer profiles, contacts and booking relationships.",
   },
+  "/dashboard/payments": {
+    title: "Payments",
+    description: "Track collections, balances and payment history.",
+  },
   "/dashboard/vehicles": {
     title: "Vehicles",
     description: "Manage fleet vehicles and availability.",
