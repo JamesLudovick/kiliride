@@ -26,7 +26,9 @@ export function LoginPage() {
       saveAuthSession(auth);
 
       window.location.href =
-        auth.user.role === "ADMIN" ? "/dashboard" : "/";
+        auth.user.role === "ADMIN" || auth.user.role === "STAFF"
+          ? "/dashboard"
+          : "/";
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Login failed",

@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+
 import { PublicHome } from "./components/PublicHome";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { StaffDashboard } from "./pages/StaffDashboard";
@@ -5,80 +8,94 @@ import { VehiclesPage } from "./pages/VehiclesPage";
 import { DriversPage } from "./pages/DriversPage";
 import { BookingsPage } from "./pages/BookingsPage";
 import { LoginPage } from "./pages/LoginPage";
-import { getStoredUser, isStaffOrAdmin } from "./lib/auth";
 
-function redirectToLogin() {
-  window.location.href = "/login";
-  return null;
+import {
+  getStoredUser,
+  isStaffOrAdmin,
+} from "./lib/auth";
+
+type ProtectedRouteProps = {
+  children: ReactNode;
+};
+
+function RequireStaffOrAdmin({ children }: ProtectedRouteProps) {
+  const user = getStoredUser();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isStaffOrAdmin(user)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function DashboardHome() {
+  const user = getStoredUser();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === "ADMIN") {
+    return <AdminDashboard />;
+  }
+
+  if (user.role === "STAFF") {
+    return <StaffDashboard />;
+  }
+
+  return <Navigate to="/" replace />;
 }
 
 function App() {
-  const path = window.location.pathname;
-  const user = getStoredUser();
+  return (
+    <Routes>
+      <Route path="/" element={<PublicHome />} />
 
-  if (path.startsWith("/login")) {
-    return <LoginPage />;
-  }
+      <Route path="/login" element={<LoginPage />} />
 
+      <Route
+        path="/dashboard"
+        element={
+          <RequireStaffOrAdmin>
+            <DashboardHome />
+          </RequireStaffOrAdmin>
+        }
+      />
 
-  if (path.startsWith("/dashboard/bookings")) {
-    if (!user) {
-      return redirectToLogin();
-    }
+      <Route
+        path="/dashboard/bookings"
+        element={
+          <RequireStaffOrAdmin>
+            <BookingsPage />
+          </RequireStaffOrAdmin>
+        }
+      />
 
-    if (!isStaffOrAdmin(user)) {
-      window.location.href = "/dashboard";
-      return null;
-    }
+      <Route
+        path="/dashboard/vehicles"
+        element={
+          <RequireStaffOrAdmin>
+            <VehiclesPage />
+          </RequireStaffOrAdmin>
+        }
+      />
 
-    return <BookingsPage />;
-  }
+      <Route
+        path="/dashboard/drivers"
+        element={
+          <RequireStaffOrAdmin>
+            <DriversPage />
+          </RequireStaffOrAdmin>
+        }
+      />
 
-  if (path.startsWith("/dashboard/drivers")) {
-    if (!user) {
-      return redirectToLogin();
-    }
-
-    if (!isStaffOrAdmin(user)) {
-      window.location.href = "/dashboard";
-      return null;
-    }
-
-    return <DriversPage />;
-  }
-
-  if (path.startsWith("/dashboard/vehicles")) {
-    if (!user) {
-      return redirectToLogin();
-    }
-
-    if (!isStaffOrAdmin(user)) {
-      window.location.href = "/dashboard";
-      return null;
-    }
-
-    return <VehiclesPage />;
-  }
-
-  if (path.startsWith("/dashboard")) {
-    if (!user) {
-      return redirectToLogin();
-    }
-
-    switch (user.role) {
-      case "ADMIN":
-        return <AdminDashboard />;
-
-      case "STAFF":
-        return <StaffDashboard />;
-
-      default:
-        window.location.href = "/";
-        return null;
-    }
-  }
-
-  return <PublicHome />;
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 export default App;
