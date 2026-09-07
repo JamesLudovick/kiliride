@@ -26,6 +26,11 @@ const mainNavigation = [
     icon: CalendarDays,
   },
   {
+    label: "Calendar",
+    href: "/dashboard/calendar",
+    icon: CalendarRange,
+  },
+  {
     label: "Vehicles",
     href: "/dashboard/vehicles",
     icon: Car,
@@ -52,13 +57,6 @@ const managementNavigation = [
     label: "Maintenance",
     href: "/dashboard/maintenance",
     icon: Wrench,
-  },
-];
-
-const comingSoon = [
-  {
-    label: "Calendar",
-    icon: CalendarRange,
   },
 ];
 
@@ -150,25 +148,6 @@ export function Sidebar() {
                   <Icon size={18} strokeWidth={2} />
                   <span>{item.label}</span>
                 </NavLink>
-              );
-            })}
-
-            {comingSoon.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <div
-                  key={item.label}
-                  className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-emerald-50/35"
-                >
-                  <Icon size={18} />
-
-                  <span>{item.label}</span>
-
-                  <span className="ml-auto rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-50/35">
-                    Soon
-                  </span>
-                </div>
               );
             })}
           </nav>

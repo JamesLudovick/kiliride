@@ -1,6 +1,7 @@
 import {
   BarChart3,
   CalendarDays,
+  CalendarRange,
   Car,
   CircleDollarSign,
   ShieldCheck,
@@ -20,6 +21,11 @@ const navigation = [
     label: "Bookings",
     href: "/dashboard/bookings",
     icon: CalendarDays,
+  },
+  {
+    label: "Calendar",
+    href: "/dashboard/calendar",
+    icon: CalendarRange,
   },
   {
     label: "Customers",
@@ -51,7 +57,7 @@ const navigation = [
 export function MobileNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden">
-      <div className="mx-auto grid max-w-3xl grid-cols-7 gap-1">
+      <div className="mx-auto grid max-w-3xl grid-cols-8 gap-1">
         {navigation.map((item) => {
           const Icon = item.icon;
 
@@ -61,7 +67,7 @@ export function MobileNav() {
               to={item.href}
               end={item.end}
               className={({ isActive }: { isActive: boolean }) =>
-                `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition ${
+                `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[8px] font-bold transition ${
                   isActive
                     ? "bg-emerald-50 text-primary"
                     : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"

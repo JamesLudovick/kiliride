@@ -11,6 +11,7 @@ import { BookingsPage } from "./pages/BookingsPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { MaintenancePage } from "./pages/MaintenancePage";
+import { CalendarPage } from "./pages/CalendarPage";
 import { LoginPage } from "./pages/LoginPage";
 
 import {
@@ -118,6 +119,15 @@ function App() {
         element={
           <OperationsPage>
             <MaintenancePage />
+          </OperationsPage>
+        }
+      />
+
+      <Route
+        path="/dashboard/calendar"
+        element={
+          <OperationsPage>
+            <CalendarPage />
           </OperationsPage>
         }
       />
