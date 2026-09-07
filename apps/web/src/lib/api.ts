@@ -263,18 +263,38 @@ export function updateDriverAvailability(
 
 export interface Customer {
   id: string;
-  userId: string;
+  userId: string | null;
+
+  name: string;
+  email: string | null;
+  phone: string | null;
+
   licenseNumber: string | null;
   passportNumber: string | null;
   address: string | null;
+
   createdAt: string;
   updatedAt: string;
-  user: {
+
+  user?: {
     id: string;
     name: string;
     email: string;
     phone: string | null;
+  } | null;
+
+  _count?: {
+    Booking: number;
   };
+}
+
+export interface CreateCustomerInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  licenseNumber?: string;
+  passportNumber?: string;
+  address?: string;
 }
 
 export type BookingStatus =
@@ -341,6 +361,23 @@ export interface CreateBookingInput {
 
 export function getCustomers() {
   return authenticatedRequest<Customer[]>("/customers");
+}
+
+export function createCustomer(data: CreateCustomerInput) {
+  return authenticatedRequest<Customer>("/customers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateCustomer(
+  id: string,
+  data: Partial<CreateCustomerInput>,
+) {
+  return authenticatedRequest<Customer>(`/customers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 export function getBookings() {

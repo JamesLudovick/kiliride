@@ -550,7 +550,7 @@ export function AdminDashboard() {
 
                   <div className="min-w-0">
                     <p className="truncate font-bold text-slate-900">
-                      {booking.customer?.user.name ?? "Unknown customer"}
+                      {booking.customer?.name ?? "Unknown customer"}
                     </p>
 
                     <p className="mt-1 truncate text-xs text-slate-500">
@@ -854,7 +854,7 @@ export function AdminDashboard() {
                     </p>
 
                     <p className="mt-2 font-bold text-slate-900">
-                      {booking.customer?.user.name ?? "Unknown customer"}
+                      {booking.customer?.name ?? "Unknown customer"}
                     </p>
                   </div>
 

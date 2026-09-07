@@ -265,7 +265,18 @@ export class BookingsService {
               : BookingStatus.PENDING,
         },
         include: {
-          customer: true,
+          customer: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                },
+              },
+            },
+          },
           driver: true,
           vehicle: true,
         },

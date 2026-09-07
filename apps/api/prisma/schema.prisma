@@ -39,9 +39,15 @@ model User {
 }
 
 model CustomerProfile {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+
+  // A customer can exist without an online KiliRide account.
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  name  String
+  email String?
+  phone String?
 
   licenseNumber  String?
   passportNumber String?
@@ -51,6 +57,9 @@ model CustomerProfile {
   updatedAt DateTime  @updatedAt
   Booking   Booking[]
 
+  @@index([name])
+  @@index([email])
+  @@index([phone])
   @@map("customer_profiles")
 }
 

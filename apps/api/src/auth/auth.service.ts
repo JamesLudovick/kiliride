@@ -42,7 +42,13 @@ export class AuthService {
         phone: dto.phone?.trim(),
         passwordHash,
         role: UserRole.CUSTOMER,
-        customer: { create: {} }
+        customer: {
+          create: {
+            name: dto.name.trim(),
+            email,
+            phone: dto.phone?.trim() || null,
+          },
+        }
       }
     });
 

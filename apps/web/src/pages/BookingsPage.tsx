@@ -253,7 +253,7 @@ export function BookingsPage() {
     const query = search.trim().toLowerCase();
 
     return bookings.filter((booking) => {
-      const customerName = booking.customer?.user.name ?? "";
+      const customerName = booking.customer?.name ?? "";
       const matchesSearch =
         !query ||
         booking.referenceNumber.toLowerCase().includes(query) ||
@@ -463,7 +463,7 @@ export function BookingsPage() {
                 <option value="">Select customer</option>
                 {customers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
-                    {customer.user.name} — {customer.user.email}
+                    {customer.name} — {customer.email ?? customer.phone ?? "No contact"}
                   </option>
                 ))}
               </select>
@@ -774,12 +774,12 @@ export function BookingsPage() {
 
                     <td className="px-5 py-4">
                       <p className="font-semibold text-slate-800">
-                        {booking.customer?.user.name ?? "Unknown customer"}
+                        {booking.customer?.name ?? "Unknown customer"}
                       </p>
 
                       <p className="mt-1 text-xs text-slate-400">
-                        {booking.customer?.user.phone ??
-                          booking.customer?.user.email ??
+                        {booking.customer?.phone ??
+                          booking.customer?.email ??
                           "—"}
                       </p>
                     </td>
