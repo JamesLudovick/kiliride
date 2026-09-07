@@ -264,6 +264,27 @@ export class BookingsService {
           passengerCount: dto.passengerCount,
           fare: new Prisma.Decimal(dto.fare),
           serviceType: this.normalizeServiceType(dto.serviceType),
+
+          airportTransferType:
+            dto.serviceType === ServiceType.AIRPORT_TRANSFER
+              ? dto.airportTransferType
+              : null,
+
+          flightNumber:
+            dto.serviceType === ServiceType.AIRPORT_TRANSFER
+              ? dto.flightNumber?.trim() || null
+              : null,
+
+          airline:
+            dto.serviceType === ServiceType.AIRPORT_TRANSFER
+              ? dto.airline?.trim() || null
+              : null,
+
+          airportTerminal:
+            dto.serviceType === ServiceType.AIRPORT_TRANSFER
+              ? dto.airportTerminal?.trim() || null
+              : null,
+
           notes: dto.notes?.trim() || null,
           status:
             dto.driverId || dto.vehicleId
@@ -382,6 +403,23 @@ export class BookingsService {
         ...(dto.serviceType !== undefined && {
           serviceType: this.normalizeServiceType(dto.serviceType),
         }),
+
+        ...(dto.airportTransferType !== undefined && {
+          airportTransferType: dto.airportTransferType,
+        }),
+
+        ...(dto.flightNumber !== undefined && {
+          flightNumber: dto.flightNumber.trim() || null,
+        }),
+
+        ...(dto.airline !== undefined && {
+          airline: dto.airline.trim() || null,
+        }),
+
+        ...(dto.airportTerminal !== undefined && {
+          airportTerminal: dto.airportTerminal.trim() || null,
+        }),
+
         ...(dto.notes !== undefined && {
           notes: dto.notes.trim() || null,
         }),

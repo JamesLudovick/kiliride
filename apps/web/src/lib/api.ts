@@ -320,6 +320,10 @@ export type BookingServiceType =
   | "WEDDING_EVENT"
   | "OTHER";
 
+export type AirportTransferType =
+  | "ARRIVAL"
+  | "DEPARTURE";
+
 
 export interface Booking {
   id: string;
@@ -334,6 +338,12 @@ export interface Booking {
   passengerCount: number;
   fare: string | number;
   serviceType: BookingServiceType;
+
+  airportTransferType: AirportTransferType | null;
+  flightNumber: string | null;
+  airline: string | null;
+  airportTerminal: string | null;
+
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   notes: string | null;
@@ -361,6 +371,11 @@ export interface Booking {
 export interface CreateBookingInput {
   customerId: string;
   serviceType: BookingServiceType;
+
+  airportTransferType?: AirportTransferType;
+  flightNumber?: string;
+  airline?: string;
+  airportTerminal?: string;
   driverId?: string;
   vehicleId?: string;
   pickupLocation: string;

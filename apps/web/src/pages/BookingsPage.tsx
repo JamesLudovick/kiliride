@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  AirportTransferType,
   Booking,
   BookingServiceType,
   BookingStatus,
@@ -117,6 +118,12 @@ export function BookingsPage() {
   const [customerId, setCustomerId] = useState("");
   const [serviceType, setServiceType] =
     useState<BookingServiceType>("AIRPORT_TRANSFER");
+
+  const [airportTransferType, setAirportTransferType] =
+    useState<AirportTransferType>("ARRIVAL");
+  const [flightNumber, setFlightNumber] = useState("");
+  const [airline, setAirline] = useState("");
+  const [airportTerminal, setAirportTerminal] = useState("");
   const [showQuickCustomer, setShowQuickCustomer] = useState(false);
   const [customerSaving, setCustomerSaving] = useState(false);
   const [quickCustomerError, setQuickCustomerError] = useState("");
@@ -167,6 +174,10 @@ export function BookingsPage() {
   function resetForm() {
     setCustomerId("");
     setServiceType("AIRPORT_TRANSFER");
+    setAirportTransferType("ARRIVAL");
+    setFlightNumber("");
+    setAirline("");
+    setAirportTerminal("");
     setShowQuickCustomer(false);
     setQuickCustomerError("");
     setNewCustomerName("");
@@ -245,6 +256,22 @@ export function BookingsPage() {
       await createBooking({
         customerId,
         serviceType,
+
+        ...(serviceType === "AIRPORT_TRANSFER"
+          ? {
+              airportTransferType,
+              ...(flightNumber.trim()
+                ? { flightNumber: flightNumber.trim() }
+                : {}),
+              ...(airline.trim()
+                ? { airline: airline.trim() }
+                : {}),
+              ...(airportTerminal.trim()
+                ? { airportTerminal: airportTerminal.trim() }
+                : {}),
+            }
+          : {}),
+
         ...(driverId ? { driverId } : {}),
         ...(vehicleId ? { vehicleId } : {}),
         pickupLocation,
@@ -722,11 +749,19 @@ export function BookingsPage() {
               <select
                 required
                 value={serviceType}
-                onChange={(event) =>
-                  setServiceType(
-                    event.target.value as BookingServiceType,
-                  )
-                }
+                onChange={(event) => {
+                  const nextServiceType =
+                    event.target.value as BookingServiceType;
+
+                  setServiceType(nextServiceType);
+
+                  if (nextServiceType !== "AIRPORT_TRANSFER") {
+                    setAirportTransferType("ARRIVAL");
+                    setFlightNumber("");
+                    setAirline("");
+                    setAirportTerminal("");
+                  }
+                }}
                 className="kr-select"
               >
                 {Object.entries(serviceTypeLabels).map(
@@ -783,6 +818,88 @@ export function BookingsPage() {
                 ))}
               </select>
             </label>
+
+            {serviceType === "AIRPORT_TRANSFER" && (
+              <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-4 lg:col-span-12">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">
+                      Airport transfer details
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Add flight information when available. This helps
+                      operations coordinate airport pickups and departures.
+                    </p>
+                  </div>
+
+                  <MapPin
+                    size={18}
+                    className="shrink-0 text-sky-700"
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <label className="kr-label">
+                    Transfer direction *
+                    <select
+                      required
+                      value={airportTransferType}
+                      onChange={(event) =>
+                        setAirportTransferType(
+                          event.target.value as AirportTransferType,
+                        )
+                      }
+                      className="kr-select bg-white"
+                    >
+                      <option value="ARRIVAL">
+                        Arrival — Airport pickup
+                      </option>
+
+                      <option value="DEPARTURE">
+                        Departure — Airport drop-off
+                      </option>
+                    </select>
+                  </label>
+
+                  <label className="kr-label">
+                    Flight number
+                    <input
+                      value={flightNumber}
+                      onChange={(event) =>
+                        setFlightNumber(event.target.value)
+                      }
+                      className="kr-input bg-white"
+                      placeholder="e.g. KQ 482"
+                    />
+                  </label>
+
+                  <label className="kr-label">
+                    Airline
+                    <input
+                      value={airline}
+                      onChange={(event) =>
+                        setAirline(event.target.value)
+                      }
+                      className="kr-input bg-white"
+                      placeholder="e.g. Kenya Airways"
+                    />
+                  </label>
+
+                  <label className="kr-label">
+                    Terminal / meeting point
+                    <input
+                      value={airportTerminal}
+                      onChange={(event) =>
+                        setAirportTerminal(event.target.value)
+                      }
+                      className="kr-input bg-white"
+                      placeholder="e.g. KIA arrivals"
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
 
             <label className="kr-label lg:col-span-6">
               Pickup location *
@@ -1039,6 +1156,18 @@ export function BookingsPage() {
                       <span className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
                         {serviceTypeLabels[booking.serviceType]}
                       </span>
+
+                      {booking.serviceType === "AIRPORT_TRANSFER" &&
+                        booking.airportTransferType && (
+                          <p className="mt-1 text-[10px] font-semibold text-sky-600">
+                            {booking.airportTransferType === "ARRIVAL"
+                              ? "Airport arrival"
+                              : "Airport departure"}
+                            {booking.flightNumber
+                              ? ` · ${booking.flightNumber}`
+                              : ""}
+                          </p>
+                        )}
 
                       <div className="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
                         <UsersRound size={13} />

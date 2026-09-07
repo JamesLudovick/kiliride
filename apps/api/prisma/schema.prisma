@@ -138,6 +138,11 @@ enum ServiceType {
   OTHER
 }
 
+enum AirportTransferType {
+  ARRIVAL
+  DEPARTURE
+}
+
 model Booking {
   id              String @id @default(cuid())
   referenceNumber String @unique
@@ -159,6 +164,11 @@ model Booking {
   fare           Decimal  @db.Decimal(12, 2)
 
   serviceType ServiceType @default(OTHER)
+
+  airportTransferType AirportTransferType?
+  flightNumber        String?
+  airline             String?
+  airportTerminal     String?
 
   status        BookingStatus @default(PENDING)
   paymentStatus PaymentStatus @default(UNPAID)

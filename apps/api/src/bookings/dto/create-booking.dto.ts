@@ -1,4 +1,4 @@
-import { ServiceType } from "@prisma/client";
+import { AirportTransferType, ServiceType } from "@prisma/client";
 import {
   IsDateString,
   IsEnum,
@@ -15,6 +15,22 @@ export class CreateBookingDto {
 
   @IsEnum(ServiceType)
   serviceType: ServiceType;
+
+  @IsOptional()
+  @IsEnum(AirportTransferType)
+  airportTransferType?: AirportTransferType;
+
+  @IsOptional()
+  @IsString()
+  flightNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  airline?: string;
+
+  @IsOptional()
+  @IsString()
+  airportTerminal?: string;
 
   @IsOptional()
   @IsString()
