@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PublicHome } from "./components/PublicHome";
+import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { StaffDashboard } from "./pages/StaffDashboard";
 import { VehiclesPage } from "./pages/VehiclesPage";
@@ -44,10 +45,22 @@ function DashboardHome() {
   }
 
   if (user.role === "STAFF") {
-    return <StaffDashboard />;
+    return (
+      <DashboardLayout>
+        <StaffDashboard />
+      </DashboardLayout>
+    );
   }
 
   return <Navigate to="/" replace />;
+}
+
+function OperationsPage({ children }: ProtectedRouteProps) {
+  return (
+    <RequireStaffOrAdmin>
+      <DashboardLayout>{children}</DashboardLayout>
+    </RequireStaffOrAdmin>
+  );
 }
 
 function App() {
@@ -69,27 +82,27 @@ function App() {
       <Route
         path="/dashboard/bookings"
         element={
-          <RequireStaffOrAdmin>
+          <OperationsPage>
             <BookingsPage />
-          </RequireStaffOrAdmin>
+          </OperationsPage>
         }
       />
 
       <Route
         path="/dashboard/vehicles"
         element={
-          <RequireStaffOrAdmin>
+          <OperationsPage>
             <VehiclesPage />
-          </RequireStaffOrAdmin>
+          </OperationsPage>
         }
       />
 
       <Route
         path="/dashboard/drivers"
         element={
-          <RequireStaffOrAdmin>
+          <OperationsPage>
             <DriversPage />
-          </RequireStaffOrAdmin>
+          </OperationsPage>
         }
       />
 
