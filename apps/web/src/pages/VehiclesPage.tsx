@@ -1,12 +1,15 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
   Car,
   CheckCircle2,
+  CircleDot,
   Loader2,
+  Pencil,
   Plus,
+  Search,
   Trash2,
-  Truck,
+  Wrench,
+  X,
 } from "lucide-react";
 import {
   createVehicle,
@@ -54,6 +57,10 @@ export function VehiclesPage() {
   const [color, setColor] = useState("");
   const [type, setType] = useState<Vehicle["type"]>("SUV");
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<"ALL" | Vehicle["status"]>("ALL");
 
   async function loadVehicles() {
     try {
@@ -84,6 +91,7 @@ export function VehiclesPage() {
     setColor(vehicle.color ?? "");
     setType(vehicle.type);
     setError("");
+    setShowForm(true);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -108,6 +116,7 @@ export function VehiclesPage() {
       setYear("");
       setColor("");
       setType("SUV");
+      setShowForm(false);
 
       await loadVehicles();
     } catch (err) {
@@ -128,6 +137,7 @@ export function VehiclesPage() {
     setColor("");
     setType("SUV");
     setError("");
+    setShowForm(false);
   }
 
   async function handleUpdateVehicle(event: FormEvent) {
@@ -207,6 +217,39 @@ export function VehiclesPage() {
     }
   }
 
+  const filteredVehicles = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return vehicles.filter((vehicle) => {
+      const matchesSearch =
+        !query ||
+        vehicle.registrationNumber.toLowerCase().includes(query) ||
+        vehicle.make.toLowerCase().includes(query) ||
+        vehicle.model.toLowerCase().includes(query) ||
+        vehicle.type.toLowerCase().includes(query) ||
+        (vehicle.color ?? "").toLowerCase().includes(query);
+
+      const matchesStatus =
+        statusFilter === "ALL" || vehicle.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [vehicles, searchTerm, statusFilter]);
+
+  const fleetStats = useMemo(
+    () => ({
+      total: vehicles.length,
+      available: vehicles.filter((vehicle) => vehicle.status === "AVAILABLE")
+        .length,
+      onTrip: vehicles.filter((vehicle) => vehicle.status === "ON_TRIP")
+        .length,
+      maintenance: vehicles.filter(
+        (vehicle) => vehicle.status === "MAINTENANCE",
+      ).length,
+    }),
+    [vehicles],
+  );
+
   if (!user || !["ADMIN", "STAFF"].includes(user.role)) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
@@ -222,94 +265,175 @@ export function VehiclesPage() {
   }
 
   return (
-    <main className="min-h-screen">
-      <header className="kr-page-header sticky top-0 z-20">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
-          <div>
-            <button
-              className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground"
-              onClick={() => {
-                window.location.href = "/dashboard";
-              }}
-              type="button"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to dashboard
-            </button>
+    <div className="space-y-5">
+      {/* Fleet workspace toolbar */}
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+              <Car size={13} />
+              Fleet workspace
+            </span>
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Car className="h-5 w-5" />
-              </div>
+            {!loading && (
+              <span className="text-xs font-medium text-slate-400">
+                {vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  KiliRide Operations
-                </p>
-                <h1 className="text-xl font-bold tracking-tight">
-                  Vehicle Management
-                </h1>
-              </div>
+          <p className="mt-2 text-sm text-slate-500">
+            Manage your fleet, availability and operational vehicle status.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (showForm) {
+              cancelEditing();
+            } else {
+              setShowForm(true);
+            }
+          }}
+          className={
+            showForm
+              ? "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              : "kr-button-primary shrink-0"
+          }
+        >
+          {showForm ? (
+            <>
+              <X size={17} />
+              Close form
+            </>
+          ) : (
+            <>
+              <Plus size={17} />
+              Add vehicle
+            </>
+          )}
+        </button>
+      </section>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm font-medium text-red-700 shadow-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Fleet statistics */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Total fleet
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {fleetStats.total}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Registered vehicles
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
+              <Car size={19} />
             </div>
           </div>
+        </div>
 
-          <div className="hidden items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Fleet system online
+        <div className="rounded-2xl border border-emerald-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Available
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {fleetStats.available}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Ready for assignment
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
+              <CheckCircle2 size={19} />
+            </div>
           </div>
         </div>
-      </header>
 
-      <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+        <div className="rounded-2xl border border-sky-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                On trip
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {fleetStats.onTrip}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Currently operating
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-sky-50 text-sky-700">
+              <CircleDot size={19} />
+            </div>
           </div>
-        )}
+        </div>
 
-        <section className="kr-card overflow-hidden">
-          <div className="border-b bg-gradient-to-r from-primary/[0.07] via-transparent to-secondary/[0.08] px-5 py-5">
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <div>
-                <div className="flex items-center gap-2">
-                  {editingVehicle ? (
-                    <Car className="h-4 w-4 text-primary" />
-                  ) : (
-                    <Plus className="h-4 w-4 text-primary" />
-                  )}
+        <div className="rounded-2xl border border-amber-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Maintenance
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {fleetStats.maintenance}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Temporarily unavailable
+              </p>
+            </div>
 
-                  <h2 className="font-bold">
-                    {editingVehicle ? "Edit vehicle" : "Add vehicle"}
-                  </h2>
-                </div>
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
+              <Wrench size={19} />
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {editingVehicle
-                    ? "Update the vehicle details and save your changes."
-                    : "Add the basic details exactly as they appear on the vehicle documents."}
-                </p>
+      {/* Vehicle form */}
+      {showForm && (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 to-white px-5 py-5 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-sm">
+                {editingVehicle ? <Pencil size={18} /> : <Plus size={19} />}
               </div>
 
-              <div className="hidden rounded-lg border bg-card px-3 py-2 text-[11px] text-muted-foreground md:block">
-                {editingVehicle ? (
-                  <>
-                    Editing: <strong>{editingVehicle.registrationNumber}</strong>
-                  </>
-                ) : (
-                  <>
-                    Example: <strong>T 123 ABC</strong> · Toyota · Land Cruiser
-                  </>
-                )}
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">
+                  {editingVehicle ? "Edit vehicle" : "Add a vehicle"}
+                </h2>
+
+                <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
+                  {editingVehicle
+                    ? `Update the details for ${editingVehicle.registrationNumber}.`
+                    : "Add the vehicle exactly as it appears in the fleet and registration records."}
+                </p>
               </div>
             </div>
           </div>
 
           <form
-            className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3"
+            className="grid gap-x-5 gap-y-5 p-5 sm:p-6 md:grid-cols-2 xl:grid-cols-3"
             onSubmit={editingVehicle ? handleUpdateVehicle : handleSubmit}
           >
             <label className="kr-label">
-              Registration number
+              Registration number *
               <input
                 className="kr-input"
                 placeholder="e.g. T 123 ABC"
@@ -325,7 +449,7 @@ export function VehiclesPage() {
             </label>
 
             <label className="kr-label">
-              Make
+              Make *
               <input
                 className="kr-input"
                 placeholder="e.g. Toyota"
@@ -333,11 +457,11 @@ export function VehiclesPage() {
                 onChange={(event) => setMake(event.target.value)}
                 required
               />
-              <span className="kr-help">Manufacturer</span>
+              <span className="kr-help">Vehicle manufacturer</span>
             </label>
 
             <label className="kr-label">
-              Model
+              Model *
               <input
                 className="kr-input"
                 placeholder="e.g. Land Cruiser"
@@ -349,7 +473,7 @@ export function VehiclesPage() {
             </label>
 
             <label className="kr-label">
-              Year
+              Year *
               <input
                 className="kr-input"
                 placeholder="e.g. 2024"
@@ -371,11 +495,11 @@ export function VehiclesPage() {
                 value={color}
                 onChange={(event) => setColor(event.target.value)}
               />
-              <span className="kr-help">Optional exterior color</span>
+              <span className="kr-help">Exterior color</span>
             </label>
 
             <label className="kr-label">
-              Vehicle type
+              Vehicle type *
               <select
                 className="kr-select"
                 value={type}
@@ -389,190 +513,271 @@ export function VehiclesPage() {
                   </option>
                 ))}
               </select>
-              <span className="kr-help">Choose the closest category</span>
+              <span className="kr-help">
+                Select the closest fleet category
+              </span>
             </label>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end lg:col-span-3 lg:justify-end">
-              {editingVehicle && (
-                <button
-                  className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium transition hover:bg-slate-50 sm:w-auto"
-                  disabled={saving}
-                  onClick={cancelEditing}
-                  type="button"
-                >
-                  Cancel edit
-                </button>
-              )}
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end md:col-span-2 xl:col-span-3">
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                disabled={saving}
+                onClick={cancelEditing}
+                type="button"
+              >
+                Cancel
+              </button>
 
               <button
-                className="kr-button-primary w-full sm:w-auto"
+                className="kr-button-primary min-w-[150px]"
                 disabled={saving}
                 type="submit"
               >
                 {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <>
+                    <Loader2 size={17} className="animate-spin" />
+                    {editingVehicle ? "Saving..." : "Adding..."}
+                  </>
                 ) : editingVehicle ? (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <>
+                    <CheckCircle2 size={17} />
+                    Save changes
+                  </>
                 ) : (
-                  <Plus className="h-4 w-4" />
+                  <>
+                    <Plus size={17} />
+                    Add vehicle
+                  </>
                 )}
-
-                {saving
-                  ? editingVehicle
-                    ? "Saving changes..."
-                    : "Adding vehicle..."
-                  : editingVehicle
-                    ? "Save changes"
-                    : "Add vehicle"}
               </button>
             </div>
           </form>
         </section>
+      )}
 
-        <section className="kr-card overflow-hidden">
-          <div className="flex flex-col justify-between gap-3 border-b px-5 py-5 sm:flex-row sm:items-center">
+      {/* Fleet directory */}
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 text-primary" />
-                <h2 className="font-bold">Fleet vehicles</h2>
-              </div>
+              <h2 className="text-base font-bold text-slate-950">
+                Fleet directory
+              </h2>
 
-              <p className="mt-1 text-xs text-muted-foreground">
-                Manage availability and operational status.
+              <p className="mt-1 text-xs text-slate-500">
+                {filteredVehicles.length} of {vehicles.length} vehicle
+                {vehicles.length === 1 ? "" : "s"} shown
               </p>
             </div>
 
-            <div className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-              {vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative min-w-0 sm:w-[330px]">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search plate, make, model or type..."
+                  className="kr-input pl-9"
+                />
+              </div>
+
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as "ALL" | Vehicle["status"],
+                  )
+                }
+                className="kr-select sm:w-[180px]"
+              >
+                <option value="ALL">All statuses</option>
+
+                {vehicleStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status.replace("_", " ")}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+        </div>
 
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading fleet...
-            </div>
-          ) : vehicles.length === 0 ? (
-            <div className="p-10 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                <Car className="h-5 w-5 text-muted-foreground" />
-              </div>
+        {loading ? (
+          <div className="flex min-h-[220px] items-center justify-center">
+            <div className="text-center">
+              <Loader2
+                size={25}
+                className="mx-auto animate-spin text-primary"
+              />
 
-              <h3 className="mt-4 text-sm font-semibold">
-                No vehicles yet
-              </h3>
-
-              <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-                Add your first fleet vehicle using the form above.
-                For example: T 123 ABC, Toyota Land Cruiser, 2024.
+              <p className="mt-3 text-sm font-medium text-slate-500">
+                Loading fleet...
               </p>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Vehicle</th>
-                    <th className="px-5 py-3 font-semibold">Year</th>
-                    <th className="px-5 py-3 font-semibold">Type</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 text-right font-semibold">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
+          </div>
+        ) : filteredVehicles.length === 0 ? (
+          <div className="flex min-h-[260px] items-center justify-center px-5 py-10">
+            <div className="max-w-md text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-primary">
+                <Car size={25} />
+              </div>
 
-                <tbody>
-                  {vehicles.map((vehicle) => (
-                    <tr
-                      className="border-b last:border-0 hover:bg-muted/20"
-                      key={vehicle.id}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Car className="h-4 w-4" />
-                          </div>
+              <h3 className="mt-4 text-base font-bold text-slate-900">
+                {vehicles.length === 0
+                  ? "No vehicles in the fleet"
+                  : "No matching vehicles"}
+              </h3>
 
-                          <div>
-                            <p className="font-semibold">
-                              {vehicle.make} {vehicle.model}
-                            </p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {vehicle.registrationNumber}
-                              {vehicle.color
-                                ? ` · ${vehicle.color}`
-                                : ""}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+                {vehicles.length === 0
+                  ? "Add the first KiliRide vehicle to begin managing fleet availability and assignments."
+                  : "Try changing the fleet search or status filter."}
+              </p>
 
-                      <td className="px-5 py-4 text-muted-foreground">
-                        {vehicle.year}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
-                          {vehicle.type}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <select
-                            className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold outline-none ${statusStyles[vehicle.status]}`}
-                            value={vehicle.status}
-                            onChange={(event) =>
-                              void handleStatusChange(
-                                vehicle.id,
-                                event.target.value as Vehicle["status"],
-                              )
-                            }
-                          >
-                            {vehicleStatuses.map((status) => (
-                              <option key={status} value={status}>
-                                {status.replace("_", " ")}
-                              </option>
-                            ))}
-                          </select>
-
-                          {vehicle.status === "AVAILABLE" && (
-                            <CheckCircle2 className="hidden h-4 w-4 text-emerald-500 sm:block" />
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-2.5 text-xs font-medium transition hover:bg-muted"
-                            onClick={() => startEditing(vehicle)}
-                            type="button"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                            onClick={() => void handleDelete(vehicle.id)}
-                            type="button"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Remove
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {vehicles.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="kr-button-primary mt-5"
+                >
+                  <Plus size={17} />
+                  Add first vehicle
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("ALL");
+                  }}
+                  className="mt-5 inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
-          )}
-        </section>
-      </div>
-    </main>
+          </div>
+        ) : (
+          <div className="grid gap-4 p-4 md:grid-cols-2 2xl:grid-cols-3">
+            {filteredVehicles.map((vehicle) => (
+              <article
+                key={vehicle.id}
+                className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-950/5"
+              >
+                <div className="border-b border-slate-100 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-primary">
+                        <Car size={21} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="truncate font-bold text-slate-950">
+                          {vehicle.make} {vehicle.model}
+                        </h3>
+
+                        <p className="mt-1 text-sm font-semibold tracking-wide text-slate-500">
+                          {vehicle.registrationNumber}
+                        </p>
+                      </div>
+                    </div>
+
+                    <select
+                      className={`max-w-[135px] rounded-full border-0 px-2.5 py-1.5 text-[11px] font-bold outline-none ${statusStyles[vehicle.status]}`}
+                      value={vehicle.status}
+                      onChange={(event) =>
+                        void handleStatusChange(
+                          vehicle.id,
+                          event.target.value as Vehicle["status"],
+                        )
+                      }
+                    >
+                      {vehicleStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status.replace("_", " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                  <div className="px-4 py-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Type
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                      {vehicle.type}
+                    </p>
+                  </div>
+
+                  <div className="px-4 py-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Year
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                      {vehicle.year}
+                    </p>
+                  </div>
+
+                  <div className="px-4 py-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Color
+                    </p>
+                    <p className="mt-1 truncate text-sm font-semibold text-slate-700">
+                      {vehicle.color || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 p-4">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        vehicle.status === "AVAILABLE"
+                          ? "bg-emerald-500"
+                          : vehicle.status === "ON_TRIP"
+                            ? "bg-sky-500"
+                            : vehicle.status === "MAINTENANCE"
+                              ? "bg-amber-500"
+                              : "bg-slate-400"
+                      }`}
+                    />
+                    {vehicle.status.replace("_", " ")}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-primary"
+                      onClick={() => startEditing(vehicle)}
+                      type="button"
+                    >
+                      <Pencil size={14} />
+                      Edit
+                    </button>
+
+                    <button
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-red-600 transition hover:bg-red-50"
+                      onClick={() => void handleDelete(vehicle.id)}
+                      type="button"
+                    >
+                      <Trash2 size={14} />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
+
 }
 
 function ShieldIcon() {
