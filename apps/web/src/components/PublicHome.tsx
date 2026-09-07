@@ -16,18 +16,11 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { logout } from "../lib/api";
-import {
-  clearAuthSession,
-  getStoredUser,
-  isStaffOrAdmin,
-} from "../lib/auth";
-
-const services = [
+ const services = [
   {
     name: "Airport Transfers",
     detail:
-      "Reliable arrivals and departures for Kilimanjaro International Airport and nearby destinations.",
+      "Reliable airport pickups and drop-offs for local and long-distance journeys.",
     icon: Plane,
   },
   {
@@ -102,324 +95,275 @@ const journeySteps = [
 ];
 
 export function PublicHome() {
-  const user = getStoredUser();
-  const staffUser = isStaffOrAdmin(user);
-  const driverUser = user?.role === "DRIVER";
-
-  async function handleSignOut() {
-    try {
-      await logout();
-    } catch {
-      clearAuthSession();
-    } finally {
-      window.location.href = "/";
-    }
-  }
-
-  const firstName =
-    user?.name.split(" ")[0] ?? "";
-
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f8faf8] text-slate-950">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#073b2e]/95 text-white backdrop-blur-xl">
-        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-5">
+    <main className="min-h-screen overflow-hidden bg-[#f3f7f5] text-slate-950">
+      {/* Public header */}
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#062f27]/95 text-white backdrop-blur-xl">
+        <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between gap-5 px-5 sm:px-6">
           <Link
             to="/"
             className="flex shrink-0 items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d6a84f] text-[#073b2e]">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#d6a84f] text-[#073b2e] shadow-lg shadow-black/10">
               <Car className="h-5 w-5" />
             </div>
 
             <div>
-              <p className="text-base font-black tracking-[0.08em]">
+              <p className="text-base font-black tracking-[0.12em]">
                 KILIRIDE
               </p>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">
-                Kilimanjaro · Tanzania
+
+              <p className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.22em] text-white/35">
+                Mobility & Transport
               </p>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-white/65 lg:flex">
+          <nav className="hidden items-center gap-8 text-[13px] font-semibold text-white/55 lg:flex">
             <a
-              className="transition hover:text-white"
               href="#services"
+              className="transition hover:text-white"
             >
               Services
             </a>
 
             <a
-              className="transition hover:text-white"
               href="#fleet"
+              className="transition hover:text-white"
             >
               Fleet
             </a>
 
             <a
-              className="transition hover:text-white"
               href="#how-it-works"
+              className="transition hover:text-white"
             >
               How it works
             </a>
 
             <a
-              className="transition hover:text-white"
               href="#why-kiliride"
+              className="transition hover:text-white"
             >
               Why KiliRide
             </a>
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            {!user ? (
-              <>
-                <Link
-                  to="/login"
-                  className="hidden rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white sm:inline-flex"
-                >
-                  Sign in
-                </Link>
+            <Link
+              to="/login"
+              className="hidden h-10 items-center justify-center rounded-xl px-4 text-xs font-bold text-white/65 transition hover:bg-white/[0.07] hover:text-white sm:inline-flex"
+            >
+              Sign in
+            </Link>
 
-                <Link
-                  to="/register"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-sm font-bold text-[#073b2e] transition hover:bg-[#f3f0e7]"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span className="hidden sm:inline">
-                    Create account
-                  </span>
-                  <span className="sm:hidden">
-                    Join
-                  </span>
-                </Link>
-              </>
-            ) : staffUser ? (
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#073b2e]"
-              >
-                Operations
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            ) : (
-              <Link
-                to={driverUser ? "/driver" : "/account"}
-                className="inline-flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-white transition hover:bg-white/10"
-              >
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#d6a84f] text-xs font-black text-[#073b2e]">
-                  {firstName.slice(0, 1).toUpperCase()}
-                </div>
-
-                <div className="hidden text-left sm:block">
-                  <p className="text-[10px] text-white/45">
-                    {driverUser ? "Driver portal" : "My account"}
-                  </p>
-                  <p className="text-xs font-bold">
-                    {firstName}
-                  </p>
-                </div>
-
-                <ArrowRight className="h-3.5 w-3.5 text-white/40" />
-              </Link>
-            )}
+            <Link
+              to="/register"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#d6a84f] px-4 text-xs font-black text-[#073b2e] transition hover:-translate-y-0.5 hover:bg-[#e0b75e]"
+            >
+              Get started
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_15%_20%,rgba(16,185,129,0.15),transparent_31%),radial-gradient(circle_at_88%_18%,rgba(214,168,79,0.20),transparent_31%)]" />
+      <section className="relative isolate overflow-hidden bg-[#062f27] text-white">
+        {/* Ambient background */}
+        <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_12%_18%,rgba(25,181,136,0.24),transparent_29%),radial-gradient(circle_at_88%_28%,rgba(214,168,79,0.19),transparent_27%),linear-gradient(135deg,#062f27_0%,#073b2e_55%,#052820_100%)]" />
 
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:pb-28 lg:pt-24">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/85 px-3 py-1.5 text-xs font-bold text-[#087456] shadow-sm">
-              <MapPin className="h-3.5 w-3.5" />
-              Moshi · Kilimanjaro
+        <div className="absolute inset-0 -z-10 opacity-[0.045] [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:52px_52px]" />
+
+        <div className="absolute -left-28 top-20 -z-10 h-80 w-80 rounded-full border border-white/[0.05]" />
+        <div className="absolute -left-12 top-36 -z-10 h-72 w-72 rounded-full border border-white/[0.04]" />
+
+        <div className="mx-auto grid min-h-[calc(100vh-76px)] max-w-7xl gap-12 px-5 py-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-16">
+          {/* Hero message */}
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/15 bg-emerald-300/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              Transport · Rental · Travel
             </div>
 
-            <h1 className="mt-6 max-w-3xl text-5xl font-black leading-[1.02] tracking-[-0.045em] text-[#073b2e] sm:text-6xl lg:text-7xl">
-              Reliable transport
-              <span className="block text-[#c39235]">
-                for every journey.
+            <h1 className="mt-7 text-[52px] font-black leading-[0.95] tracking-[-0.055em] sm:text-6xl lg:text-[66px] xl:text-[72px]">
+              Move your way.
+              <span className="mt-1 block text-[#d6a84f]">
+                We handle the journey.
               </span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Airport transfers, vehicle rental,
-              chauffeur travel, safari transport
-              and business mobility from
-              Kilimanjaro to destinations across
-              Tanzania.
+            <p className="mt-7 max-w-2xl text-base leading-7 text-emerald-50/70 sm:text-[17px]">
+              From airport transfers and vehicle
+              rental to chauffeur services,
+              tours and business transport —
+              KiliRide brings every journey
+              together in one modern mobility
+              experience.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              {!user ? (
-                <Link
-                  to="/register"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#087456] px-6 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-[#075d47]"
-                >
-                  Create your account
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              ) : staffUser ? (
-                <Link
-                  to="/dashboard"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#087456] px-6 text-sm font-bold text-white shadow-lg shadow-emerald-950/15"
-                >
-                  Open operations
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              ) : (
-                <Link
-                  to={driverUser ? "/driver" : "/account"}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#087456] px-6 text-sm font-bold text-white shadow-lg shadow-emerald-950/15"
-                >
-                  {driverUser
-                    ? "Open driver portal"
-                    : "Open my account"}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              )}
-
               <a
                 href="#services"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-[#087456]"
+                className="inline-flex h-[50px] items-center justify-center gap-2 rounded-[14px] bg-[#0a8a67] px-6 text-sm font-black text-white shadow-xl shadow-black/10 transition hover:-translate-y-0.5 hover:bg-[#0b9872]"
               >
-                Explore services
+                Explore KiliRide
+                <ArrowRight className="h-4 w-4" />
+              </a>
+
+              <a
+                href="#fleet"
+                className="inline-flex h-[50px] items-center justify-center gap-2 rounded-[14px] border border-white/15 bg-white/[0.06] px-6 text-sm font-bold text-white/75 backdrop-blur transition hover:bg-white/[0.1] hover:text-white"
+              >
+                View our fleet
                 <ChevronRight className="h-4 w-4" />
               </a>
             </div>
 
-            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-slate-500">
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3">
+              <span className="inline-flex items-center gap-2 text-xs font-semibold text-white/60">
+                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
                 Airport transfers
               </span>
 
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Car rental
+              <span className="inline-flex items-center gap-2 text-xs font-semibold text-white/60">
+                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                Vehicle rental
               </span>
 
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Safari transport
+              <span className="inline-flex items-center gap-2 text-xs font-semibold text-white/60">
+                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                Chauffeur & tours
               </span>
             </div>
           </div>
 
-          {/* Hero operational/travel visual */}
-          <div className="relative">
-            <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full bg-[#d6a84f]/20 blur-3xl" />
-            <div className="absolute -bottom-14 -left-10 h-52 w-52 rounded-full bg-emerald-400/20 blur-3xl" />
+          {/* Modern mobility visual */}
+          <div className="relative mx-auto w-full max-w-[535px] lg:ml-auto">
+            <div className="absolute -right-12 -top-12 h-52 w-52 rounded-full bg-[#d6a84f]/20 blur-3xl" />
 
-            <div className="relative overflow-hidden rounded-[2rem] border border-white bg-[#073b2e] p-4 shadow-2xl shadow-emerald-950/20">
-              <div className="rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-[#0c5946] to-[#062f25] p-6 sm:p-7">
-                <div className="flex items-start justify-between">
+            <div className="absolute -bottom-16 -left-12 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+
+            <div className="relative overflow-hidden rounded-[32px] border border-white/[0.12] bg-white/[0.055] p-2.5 shadow-[0_32px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+              <div className="rounded-[25px] border border-white/[0.08] bg-[#0a4739]/75 p-5 sm:p-6">
+                {/* Visual top */}
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#d6a84f]">
-                      Your journey
+                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#d6a84f]">
+                      KiliRide mobility
                     </p>
 
-                    <h2 className="mt-2 text-2xl font-black text-white">
-                      Kilimanjaro & beyond
+                    <h2 className="mt-2 text-2xl font-black tracking-[-0.03em] text-white sm:text-3xl">
+                      Your journey.
+                      <span className="block text-emerald-300">
+                        Your way.
+                      </span>
                     </h2>
                   </div>
 
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-white/10">
-                    <Sparkles className="h-5 w-5 text-[#d6a84f]" />
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.07] text-[#d6a84f]">
+                    <Car className="h-5 w-5" />
                   </div>
                 </div>
 
-                <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.07] p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-300/10 text-emerald-300">
-                      <Plane className="h-5 w-5" />
+                {/* Service choices */}
+                <div className="mt-7 grid grid-cols-2 gap-3">
+                  <div className="rounded-[18px] border border-white/[0.09] bg-white/[0.055] p-4 transition hover:bg-white/[0.085]">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-300/10 text-emerald-300">
+                      <Plane className="h-4 w-4" />
                     </div>
 
-                    <div>
-                      <p className="text-xs text-white/45">
-                        Start
-                      </p>
-                      <p className="font-bold text-white">
-                        Kilimanjaro International
-                        Airport
-                      </p>
-                    </div>
+                    <p className="mt-4 text-sm font-black text-white">
+                      Airport
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-4 text-white/48">
+                      Pickups and drop-offs made simple.
+                    </p>
                   </div>
 
-                  <div className="ml-[21px] h-8 border-l border-dashed border-white/20" />
-
-                  <div className="flex items-center gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#d6a84f]/10 text-[#d6a84f]">
-                      <MapPin className="h-5 w-5" />
+                  <div className="rounded-[18px] border border-white/[0.09] bg-white/[0.055] p-4 transition hover:bg-white/[0.085]">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#d6a84f]/10 text-[#e5ba65]">
+                      <Car className="h-4 w-4" />
                     </div>
 
-                    <div>
-                      <p className="text-xs text-white/45">
-                        Continue
-                      </p>
-                      <p className="font-bold text-white">
-                        Moshi · Arusha · Safari ·
-                        Tanzania
-                      </p>
+                    <p className="mt-4 text-sm font-black text-white">
+                      Rental
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-4 text-white/48">
+                      Travel freely on your schedule.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[18px] border border-white/[0.09] bg-white/[0.055] p-4 transition hover:bg-white/[0.085]">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-sky-300/10 text-sky-300">
+                      <Crown className="h-4 w-4" />
                     </div>
+
+                    <p className="mt-4 text-sm font-black text-white">
+                      Chauffeur
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-4 text-white/48">
+                      Professional travel, handled for you.
+                    </p>
+                  </div>
+
+                  <div className="rounded-[18px] border border-white/[0.09] bg-white/[0.055] p-4 transition hover:bg-white/[0.085]">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl bg-violet-300/10 text-violet-300">
+                      <Route className="h-4 w-4" />
+                    </div>
+
+                    <p className="mt-4 text-sm font-black text-white">
+                      Tours
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-4 text-white/48">
+                      Journeys and experiences made easier.
+                    </p>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                    <Car className="h-5 w-5 text-emerald-300" />
-                    <p className="mt-3 text-sm font-bold text-white">
-                      Flexible fleet
+                {/* Bottom journey statement */}
+                <div className="mt-3 flex items-center gap-4 rounded-[18px] border border-white/[0.09] bg-black/10 p-4">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-300/10 text-emerald-300">
+                    <Route className="h-5 w-5" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black text-white">
+                      Everything connected by KiliRide.
                     </p>
-                    <p className="mt-1 text-xs leading-5 text-white/45">
-                      Vehicles matched to the
-                      journey.
+
+                    <p className="mt-1 text-[11px] leading-4 text-white/48">
+                      From planning to arrival, your
+                      journey stays connected.
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                    <ShieldCheck className="h-5 w-5 text-[#d6a84f]" />
-                    <p className="mt-3 text-sm font-bold text-white">
-                      Managed travel
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-white/45">
-                      Coordinated through one
-                      KiliRide operation.
-                    </p>
-                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-[#d6a84f]" />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Service strip */}
-      <section className="border-y border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-slate-200 md:grid-cols-4">
-          {[
-            ["Airport", "Arrivals & departures"],
-            ["Rental", "Self-drive flexibility"],
-            ["Safari", "Tour transport"],
-            ["Business", "Corporate mobility"],
-          ].map(([value, label]) => (
-            <div
-              key={value}
-              className="px-4 py-6 text-center"
-            >
-              <p className="text-base font-black text-[#073b2e] sm:text-lg">
-                {value}
-              </p>
+            {/* Floating trust card */}
+            <div className="absolute -bottom-5 -left-3 hidden items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-[#073b2e] shadow-xl sm:flex">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-[#087456]">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
 
-              <p className="mt-1 text-[11px] font-medium text-slate-500">
-                {label}
-              </p>
+              <div>
+                <p className="text-[10px] font-black">
+                  Travel with confidence
+                </p>
+
+                <p className="mt-0.5 text-[9px] text-slate-400">
+                  Flexible · Managed · Connected
+                </p>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
@@ -612,7 +556,7 @@ export function PublicHome() {
       </section>
 
       {/* Final CTA */}
-      {!user && (
+      {(
         <section className="border-t border-slate-200 bg-white">
           <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-12 sm:flex-row sm:items-center sm:justify-between">
             <div>
