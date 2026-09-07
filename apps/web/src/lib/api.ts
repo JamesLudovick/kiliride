@@ -646,3 +646,66 @@ export function cancelBooking(id: string) {
     method: "POST",
   });
 }
+
+export type AdminAccountRole =
+  | "ADMIN"
+  | "STAFF"
+  | "DRIVER"
+  | "CUSTOMER";
+
+export type AdminAccountStatus =
+  | "ACTIVE"
+  | "DISABLED";
+
+export interface AdminUserAccount {
+  id: string;
+  name: string;
+  username: string | null;
+  email: string;
+  phone: string | null;
+  role: AdminAccountRole;
+  status: AdminAccountStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getAdminUserAccounts() {
+  return authenticatedRequest<AdminUserAccount[]>(
+    "/admin/users",
+  );
+}
+
+
+
+export function updateAdminUserUsername(
+  id: string,
+  username: string,
+) {
+  return authenticatedRequest<AdminUserAccount>(
+    `/admin/users/${id}/username`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        username,
+      }),
+    },
+  );
+}
+
+export function resetAdminUserPassword(
+  id: string,
+  password: string,
+) {
+  return authenticatedRequest<{
+    success: boolean;
+    message: string;
+  }>(
+    `/admin/users/${id}/password`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        password,
+      }),
+    },
+  );
+}

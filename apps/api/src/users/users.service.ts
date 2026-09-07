@@ -1,4 +1,6 @@
+import * as bcrypt from "bcrypt";
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -9,6 +11,141 @@ import { UpdateCustomerDto } from "./dto/update-customer.dto";
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  findAccounts() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [
+        {
+          role: "asc",
+        },
+        {
+          name: "asc",
+        },
+      ],
+    });
+  }
+
+  async updateUsername(
+    id: string,
+    username: string,
+  ) {
+    const normalizedUsername =
+      username.trim().toLowerCase();
+
+    const account =
+      await this.prisma.user.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!account) {
+      throw new NotFoundException(
+        "User account not found.",
+      );
+    }
+
+    const existingUsername =
+      await this.prisma.user.findUnique({
+        where: {
+          username: normalizedUsername,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (
+      existingUsername &&
+      existingUsername.id !== id
+    ) {
+      throw new ConflictException(
+        "This username is already in use.",
+      );
+    }
+
+    return this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        username: normalizedUsername,
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        phone: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async resetPassword(
+    id: string,
+    password: string,
+  ) {
+    const existing =
+      await this.prisma.user.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!existing) {
+      throw new NotFoundException(
+        "User account not found.",
+      );
+    }
+
+    const passwordHash =
+      await bcrypt.hash(password, 12);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: {
+          id,
+        },
+        data: {
+          passwordHash,
+        },
+      }),
+
+      this.prisma.session.deleteMany({
+        where: {
+          userId: id,
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message:
+        "Password reset successfully.",
+    };
+  }
+
 
   findByEmail(email: string) {
     return this.prisma.user.findUnique({

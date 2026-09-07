@@ -4,6 +4,7 @@ import {
   CalendarRange,
   Car,
   CircleDollarSign,
+  KeyRound,
   LogOut,
   ShieldCheck,
   UsersRound,
@@ -155,6 +156,20 @@ export function Sidebar() {
                 </NavLink>
               );
             })}
+
+            {user?.role === "ADMIN" && (
+              <NavLink
+                to="/dashboard/access"
+                className={({ isActive }: { isActive: boolean }) =>
+                  `kr-sidebar-item ${
+                    isActive ? "kr-sidebar-item-active" : ""
+                  }`
+                }
+              >
+                <KeyRound size={18} strokeWidth={2} />
+                <span>User Access</span>
+              </NavLink>
+            )}
           </nav>
         </div>
       </div>

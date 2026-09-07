@@ -17,6 +17,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { CustomerAccountPage } from "./pages/CustomerAccountPage";
 import { DriverPortalPage } from "./pages/DriverPortalPage";
+import { AdminAccessPage } from "./pages/AdminAccessPage";
 
 import {
   getStoredUser,
@@ -36,6 +37,20 @@ function RequireStaffOrAdmin({ children }: ProtectedRouteProps) {
 
   if (!isStaffOrAdmin(user)) {
     return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function RequireAdmin({ children }: ProtectedRouteProps) {
+  const user = getStoredUser();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "ADMIN") {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -220,6 +235,17 @@ function App() {
           <OperationsPage>
             <DriversPage />
           </OperationsPage>
+        }
+      />
+
+      <Route
+        path="/dashboard/access"
+        element={
+          <RequireAdmin>
+            <DashboardLayout>
+              <AdminAccessPage />
+            </DashboardLayout>
+          </RequireAdmin>
         }
       />
 

@@ -12,6 +12,10 @@ export default defineConfig({
         target: "http://api:4000",
         changeOrigin: true,
       },
+      "/admin": {
+        target: "http://api:4000",
+        changeOrigin: true,
+      },
       "/vehicles": {
         target: "http://api:4000",
         changeOrigin: true,
