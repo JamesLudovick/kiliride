@@ -14,6 +14,8 @@ import { MaintenancePage } from "./pages/MaintenancePage";
 import { CalendarPage } from "./pages/CalendarPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { CustomerAccountPage } from "./pages/CustomerAccountPage";
 
 import {
   getStoredUser,
@@ -32,6 +34,24 @@ function RequireStaffOrAdmin({ children }: ProtectedRouteProps) {
   }
 
   if (!isStaffOrAdmin(user)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function RequireCustomer({ children }: ProtectedRouteProps) {
+  const user = getStoredUser();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "CUSTOMER") {
+    if (isStaffOrAdmin(user)) {
+      return <Navigate to="/dashboard" replace />;
+    }
+
     return <Navigate to="/" replace />;
   }
 
@@ -78,6 +98,17 @@ function App() {
       <Route path="/" element={<PublicHome />} />
 
       <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/register" element={<RegisterPage />} />
+
+      <Route
+        path="/account"
+        element={
+          <RequireCustomer>
+            <CustomerAccountPage />
+          </RequireCustomer>
+        }
+      />
 
       <Route
         path="/dashboard"

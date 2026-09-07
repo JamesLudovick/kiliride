@@ -28,45 +28,113 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const email = this.normalizeEmail(dto.email);
+    const username = this.normalizeUsername(dto.username);
+    const name = dto.name.trim();
+    const phone = dto.phone?.trim() || null;
+
     const existingUser = await this.users.findByEmail(email);
 
     if (existingUser) {
       throw new ConflictException("An account with this email already exists.");
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name.trim(),
-        email,
-        phone: dto.phone?.trim(),
-        passwordHash,
-        role: UserRole.CUSTOMER,
-        customer: {
-          create: {
-            name: dto.name.trim(),
-            email,
-            phone: dto.phone?.trim() || null,
-          },
-        }
+    const existingUsername = await this.prisma.user.findUnique({
+      where: {
+        username
       }
+    });
+
+    if (existingUsername) {
+      throw new ConflictException("This username is already in use.");
+    }
+
+    const existingCustomer = await this.prisma.customerProfile.findFirst({
+      where: {
+        userId: null,
+        isArchived: false,
+        email: {
+          equals: email,
+          mode: "insensitive"
+        }
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          username,
+          phone,
+          passwordHash,
+          role: UserRole.CUSTOMER,
+          customer: existingCustomer
+            ? {
+                connect: {
+                  id: existingCustomer.id
+                }
+              }
+            : {
+                create: {
+                  name,
+                  email,
+                  phone
+                }
+              }
+        }
+      });
+
+      if (existingCustomer) {
+        await tx.customerProfile.update({
+          where: {
+            id: existingCustomer.id
+          },
+          data: {
+            name,
+            email,
+            phone: phone ?? existingCustomer.phone
+          }
+        });
+      }
+
+      return createdUser;
     });
 
     return this.createAuthResponse(user);
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
-    const email = this.normalizeEmail(dto.email);
-    const user = await this.users.findByEmail(email);
+    const identifier = dto.identifier.trim().toLowerCase();
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          {
+            email: identifier
+          },
+          {
+            username: identifier
+          }
+        ]
+      }
+    });
 
     if (!user || user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException("Invalid email or password.");
+      throw new UnauthorizedException("Invalid email, username or password.");
     }
 
-    const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
+    const passwordMatches = await bcrypt.compare(
+      dto.password,
+      user.passwordHash
+    );
 
     if (!passwordMatches) {
-      throw new UnauthorizedException("Invalid email or password.");
+      throw new UnauthorizedException("Invalid email, username or password.");
     }
 
     return this.createAuthResponse(user);
@@ -166,6 +234,10 @@ export class AuthService {
 
   private normalizeEmail(email: string) {
     return email.trim().toLowerCase();
+  }
+
+  private normalizeUsername(username: string) {
+    return username.trim().toLowerCase();
   }
 
   private toSafeUser(user: User): SafeUser {

@@ -47,10 +47,25 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
-export function login(email: string, password: string) {
+export function login(identifier: string, password: string) {
   return request<AuthResponse>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
+  });
+}
+
+export interface RegisterInput {
+  name: string;
+  username: string;
+  email: string;
+  phone?: string;
+  password: string;
+}
+
+export function register(data: RegisterInput) {
+  return request<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 
