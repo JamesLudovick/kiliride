@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -12,9 +13,9 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { CreateBookingDto } from "./dto/create-booking.dto";
+import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { UpdateBookingDto } from "./dto/update-booking.dto";
 import { UpdateBookingStatusDto } from "./dto/update-booking-status.dto";
-import { UpdatePaymentStatusDto } from "./dto/update-payment-status.dto";
 import { BookingsService } from "./bookings.service";
 
 @Controller("bookings")
@@ -56,12 +57,23 @@ export class BookingsController {
     return this.bookingsService.updateStatus(id, dto);
   }
 
-  @Patch(":id/payment-status")
-  updatePaymentStatus(
+  @Post(":id/payments")
+  recordPayment(
     @Param("id") id: string,
-    @Body() dto: UpdatePaymentStatusDto,
+    @Body() dto: CreatePaymentDto,
   ) {
-    return this.bookingsService.updatePaymentStatus(id, dto);
+    return this.bookingsService.recordPayment(id, dto);
+  }
+
+  @Delete(":id/payments/:paymentId")
+  deletePayment(
+    @Param("id") id: string,
+    @Param("paymentId") paymentId: string,
+  ) {
+    return this.bookingsService.deletePayment(
+      id,
+      paymentId,
+    );
   }
 
   @Post(":id/cancel")

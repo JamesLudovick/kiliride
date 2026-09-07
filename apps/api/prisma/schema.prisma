@@ -132,6 +132,16 @@ enum PaymentStatus {
   PAID
 }
 
+enum PaymentMethod {
+  CASH
+  MPESA
+  AIRTEL_MONEY
+  MIXX_BY_YAS
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
 enum ServiceType {
   AIRPORT_TRANSFER
   SELF_DRIVE
@@ -179,6 +189,8 @@ model Booking {
 
   notes String?
 
+  payments Payment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -190,6 +202,27 @@ model Booking {
   @@index([status])
   @@index([serviceType])
   @@map("bookings")
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  amount Decimal       @db.Decimal(12, 2)
+  method PaymentMethod
+
+  reference String?
+  paidAt    DateTime @default(now())
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([paidAt])
+  @@map("payments")
 }
 
 model Vehicle {

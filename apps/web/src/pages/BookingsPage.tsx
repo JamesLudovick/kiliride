@@ -18,17 +18,20 @@ import {
   BookingStatus,
   Customer,
   Driver,
+  Payment,
+  PaymentMethod,
   PaymentStatus,
   Vehicle,
   cancelBooking,
   createBooking,
+  createBookingPayment,
   createCustomer,
+  deleteBookingPayment,
   getBookings,
   getCustomers,
   getDrivers,
   getVehicles,
   updateBooking,
-  updateBookingPaymentStatus,
   updateBookingStatus,
 } from "../lib/api";
 
@@ -47,6 +50,17 @@ const paymentLabels: Record<PaymentStatus, string> = {
   PAID: "Paid",
 };
 
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  CASH: "Cash",
+  MPESA: "M-Pesa",
+  AIRTEL_MONEY: "Airtel Money",
+  MIXX_BY_YAS: "Mixx by Yas",
+  BANK_TRANSFER: "Bank transfer",
+  CARD: "Card",
+  OTHER: "Other",
+};
+
 const serviceTypeLabels: Record<BookingServiceType, string> = {
   AIRPORT_TRANSFER: "Airport Transfer",
   SELF_DRIVE: "Self Drive",
@@ -63,6 +77,31 @@ function formatDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function bookingPaidTotal(booking: Booking) {
+  return booking.payments.reduce(
+    (total, payment) =>
+      total + Number(payment.amount),
+    0,
+  );
+}
+
+function bookingBalance(booking: Booking) {
+  return Math.max(
+    0,
+    Number(booking.fare) - bookingPaidTotal(booking),
+  );
+}
+
+function localDateTimeValue(date = new Date()) {
+  const offset = date.getTimezoneOffset();
+
+  return new Date(
+    date.getTime() - offset * 60_000,
+  )
+    .toISOString()
+    .slice(0, 16);
 }
 
 function formatMoney(value: string | number) {
@@ -147,6 +186,23 @@ export function BookingsPage() {
   const [saving, setSaving] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] =
     useState<string | null>(null);
+
+  const [paymentEditingId, setPaymentEditingId] =
+    useState<string | null>(null);
+  const [paymentSavingId, setPaymentSavingId] =
+    useState<string | null>(null);
+  const [paymentDeletingId, setPaymentDeletingId] =
+    useState<string | null>(null);
+
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>("CASH");
+  const [paymentReference, setPaymentReference] =
+    useState("");
+  const [paymentPaidAt, setPaymentPaidAt] =
+    useState("");
+  const [paymentNotes, setPaymentNotes] =
+    useState("");
 
   const [resourceEditingId, setResourceEditingId] =
     useState<string | null>(null);
@@ -412,23 +468,117 @@ export function BookingsPage() {
     }
   }
 
-  async function handlePaymentChange(
+  function openPaymentEditor(booking: Booking) {
+    if (paymentEditingId === booking.id) {
+      setPaymentEditingId(null);
+      return;
+    }
+
+    setPaymentEditingId(booking.id);
+    setPaymentAmount(
+      bookingBalance(booking) > 0
+        ? String(bookingBalance(booking))
+        : "",
+    );
+    setPaymentMethod("CASH");
+    setPaymentReference("");
+    setPaymentPaidAt(localDateTimeValue());
+    setPaymentNotes("");
+    setError("");
+    setSuccess("");
+  }
+
+  async function handleRecordPayment(
     booking: Booking,
-    paymentStatus: PaymentStatus,
   ) {
+    const amount = Number(paymentAmount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError(
+        "Enter a valid payment amount greater than zero.",
+      );
+      return;
+    }
+
+    setPaymentSavingId(booking.id);
     setError("");
     setSuccess("");
 
     try {
-      await updateBookingPaymentStatus(booking.id, paymentStatus);
-      setSuccess(`Payment status updated for ${booking.referenceNumber}.`);
+      await createBookingPayment(booking.id, {
+        amount,
+        method: paymentMethod,
+        ...(paymentReference.trim()
+          ? {
+              reference: paymentReference.trim(),
+            }
+          : {}),
+        ...(paymentPaidAt
+          ? {
+              paidAt: new Date(
+                paymentPaidAt,
+              ).toISOString(),
+            }
+          : {}),
+        ...(paymentNotes.trim()
+          ? {
+              notes: paymentNotes.trim(),
+            }
+          : {}),
+      });
+
+      setSuccess(
+        `Payment recorded for ${booking.referenceNumber}.`,
+      );
+
+      setPaymentEditingId(null);
       await loadData();
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to update payment status.",
+          : "Failed to record payment.",
       );
+    } finally {
+      setPaymentSavingId(null);
+    }
+  }
+
+  async function handleDeletePayment(
+    booking: Booking,
+    payment: Payment,
+  ) {
+    if (
+      !window.confirm(
+        `Remove this ${formatMoney(payment.amount)} payment from ${booking.referenceNumber}?`,
+      )
+    ) {
+      return;
+    }
+
+    setPaymentDeletingId(payment.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      await deleteBookingPayment(
+        booking.id,
+        payment.id,
+      );
+
+      setSuccess(
+        `Payment removed from ${booking.referenceNumber}.`,
+      );
+
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to remove payment.",
+      );
+    } finally {
+      setPaymentDeletingId(null);
     }
   }
 
@@ -1351,27 +1501,362 @@ export function BookingsPage() {
                       </span>
                     </td>
 
-                    <td className="px-5 py-4">
-                      <select
-                        value={booking.paymentStatus}
-                        onChange={(event) =>
-                          void handlePaymentChange(
-                            booking,
-                            event.target.value as PaymentStatus,
-                          )
-                        }
-                        className={`rounded-full border-0 px-2.5 py-1.5 text-xs font-bold outline-none ${paymentClass(
-                          booking.paymentStatus,
-                        )}`}
-                      >
-                        {Object.entries(paymentLabels).map(
-                          ([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ),
-                        )}
-                      </select>
+                    <td className="px-5 py-4 align-top">
+                      {(() => {
+                        const paid =
+                          bookingPaidTotal(booking);
+
+                        const balance =
+                          bookingBalance(booking);
+
+                        const panelOpen =
+                          paymentEditingId === booking.id;
+
+                        const isSaving =
+                          paymentSavingId === booking.id;
+
+                        const canRecordPayment =
+                          booking.status !== "CANCELLED" &&
+                          balance > 0;
+
+                        return (
+                          <div className="min-w-[185px]">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1.5 text-xs font-bold ${paymentClass(
+                                booking.paymentStatus,
+                              )}`}
+                            >
+                              {
+                                paymentLabels[
+                                  booking.paymentStatus
+                                ]
+                              }
+                            </span>
+
+                            <div className="mt-2 space-y-0.5 text-[10px]">
+                              <p className="font-semibold text-slate-500">
+                                Paid:{" "}
+                                <span className="text-slate-700">
+                                  {formatMoney(paid)}
+                                </span>
+                              </p>
+
+                              <p className="font-semibold text-slate-500">
+                                Balance:{" "}
+                                <span
+                                  className={
+                                    balance > 0
+                                      ? "text-amber-700"
+                                      : "text-emerald-700"
+                                  }
+                                >
+                                  {formatMoney(balance)}
+                                </span>
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openPaymentEditor(
+                                  booking,
+                                )
+                              }
+                              className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-primary"
+                            >
+                              <CircleDollarSign
+                                size={13}
+                              />
+
+                              {panelOpen
+                                ? "Close payments"
+                                : canRecordPayment
+                                  ? "Record payment"
+                                  : "View payments"}
+                            </button>
+
+                            {panelOpen && (
+                              <div className="mt-3 w-[320px] rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
+                                <div>
+                                  <p className="text-xs font-bold text-slate-900">
+                                    Payments
+                                  </p>
+
+                                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                                    Fare{" "}
+                                    {formatMoney(
+                                      booking.fare,
+                                    )}{" "}
+                                    · Paid{" "}
+                                    {formatMoney(paid)} ·
+                                    Balance{" "}
+                                    {formatMoney(balance)}
+                                  </p>
+                                </div>
+
+                                {canRecordPayment && (
+                                  <div className="mt-3 space-y-2.5 border-t border-slate-200 pt-3">
+                                    <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                      Amount (TZS)
+
+                                      <input
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        max={balance}
+                                        value={
+                                          paymentAmount
+                                        }
+                                        onChange={(
+                                          event,
+                                        ) =>
+                                          setPaymentAmount(
+                                            event.target
+                                              .value,
+                                          )
+                                        }
+                                        className="kr-input mt-1 bg-white text-xs"
+                                      />
+                                    </label>
+
+                                    <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                      Method
+
+                                      <select
+                                        value={
+                                          paymentMethod
+                                        }
+                                        onChange={(
+                                          event,
+                                        ) =>
+                                          setPaymentMethod(
+                                            event.target
+                                              .value as PaymentMethod,
+                                          )
+                                        }
+                                        className="kr-select mt-1 bg-white text-xs"
+                                      >
+                                        {Object.entries(
+                                          paymentMethodLabels,
+                                        ).map(
+                                          ([
+                                            value,
+                                            label,
+                                          ]) => (
+                                            <option
+                                              key={value}
+                                              value={
+                                                value
+                                              }
+                                            >
+                                              {label}
+                                            </option>
+                                          ),
+                                        )}
+                                      </select>
+                                    </label>
+
+                                    <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                      Reference
+
+                                      <input
+                                        value={
+                                          paymentReference
+                                        }
+                                        onChange={(
+                                          event,
+                                        ) =>
+                                          setPaymentReference(
+                                            event.target
+                                              .value,
+                                          )
+                                        }
+                                        placeholder="Transaction or receipt reference"
+                                        className="kr-input mt-1 bg-white text-xs"
+                                      />
+                                    </label>
+
+                                    <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                      Payment date
+
+                                      <input
+                                        type="datetime-local"
+                                        value={
+                                          paymentPaidAt
+                                        }
+                                        onChange={(
+                                          event,
+                                        ) =>
+                                          setPaymentPaidAt(
+                                            event.target
+                                              .value,
+                                          )
+                                        }
+                                        className="kr-input mt-1 bg-white text-xs"
+                                      />
+                                    </label>
+
+                                    <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                      Notes
+
+                                      <input
+                                        value={
+                                          paymentNotes
+                                        }
+                                        onChange={(
+                                          event,
+                                        ) =>
+                                          setPaymentNotes(
+                                            event.target
+                                              .value,
+                                          )
+                                        }
+                                        placeholder="Optional payment note"
+                                        className="kr-input mt-1 bg-white text-xs"
+                                      />
+                                    </label>
+
+                                    <button
+                                      type="button"
+                                      disabled={isSaving}
+                                      onClick={() =>
+                                        void handleRecordPayment(
+                                          booking,
+                                        )
+                                      }
+                                      className="kr-button-primary mt-1 h-9 w-full text-xs"
+                                    >
+                                      {isSaving ? (
+                                        <>
+                                          <Loader2
+                                            size={13}
+                                            className="animate-spin"
+                                          />
+                                          Recording...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CircleDollarSign
+                                            size={13}
+                                          />
+                                          Record payment
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
+
+                                {!canRecordPayment &&
+                                  booking.status ===
+                                    "CANCELLED" && (
+                                    <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[10px] leading-4 text-amber-700">
+                                      New payments cannot
+                                      be recorded against a
+                                      cancelled booking.
+                                    </p>
+                                  )}
+
+                                {!canRecordPayment &&
+                                  booking.status !==
+                                    "CANCELLED" && (
+                                    <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">
+                                      This booking has been
+                                      fully paid.
+                                    </p>
+                                  )}
+
+                                <div className="mt-3 border-t border-slate-200 pt-3">
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                    Payment history
+                                  </p>
+
+                                  {booking.payments.length ===
+                                  0 ? (
+                                    <p className="mt-2 text-[10px] text-slate-400">
+                                      No payments recorded.
+                                    </p>
+                                  ) : (
+                                    <div className="mt-2 space-y-2">
+                                      {booking.payments.map(
+                                        (payment) => (
+                                          <div
+                                            key={
+                                              payment.id
+                                            }
+                                            className="rounded-lg border border-slate-200 bg-white p-2.5"
+                                          >
+                                            <div className="flex items-start justify-between gap-3">
+                                              <div>
+                                                <p className="text-xs font-bold text-slate-800">
+                                                  {formatMoney(
+                                                    payment.amount,
+                                                  )}
+                                                </p>
+
+                                                <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                                                  {
+                                                    paymentMethodLabels[
+                                                      payment
+                                                        .method
+                                                    ]
+                                                  }
+                                                </p>
+                                              </div>
+
+                                              <button
+                                                type="button"
+                                                disabled={
+                                                  paymentDeletingId ===
+                                                  payment.id
+                                                }
+                                                onClick={() =>
+                                                  void handleDeletePayment(
+                                                    booking,
+                                                    payment,
+                                                  )
+                                                }
+                                                className="text-[10px] font-bold text-red-600 hover:text-red-700 disabled:opacity-40"
+                                              >
+                                                {paymentDeletingId ===
+                                                payment.id
+                                                  ? "Removing..."
+                                                  : "Remove"}
+                                              </button>
+                                            </div>
+
+                                            <p className="mt-1 text-[10px] text-slate-400">
+                                              {formatDate(
+                                                payment.paidAt,
+                                              )}
+                                            </p>
+
+                                            {payment.reference && (
+                                              <p className="mt-1 break-all text-[10px] text-slate-500">
+                                                Ref:{" "}
+                                                {
+                                                  payment.reference
+                                                }
+                                              </p>
+                                            )}
+
+                                            {payment.notes && (
+                                              <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                                                {
+                                                  payment.notes
+                                                }
+                                              </p>
+                                            )}
+                                          </div>
+                                        ),
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     <td className="px-5 py-4 align-top">

@@ -7,15 +7,16 @@ import {
 import {
   BookingStatus,
   DriverAvailability,
+  PaymentStatus,
   Prisma,
   ServiceType,
   VehicleStatus,
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateBookingDto } from "./dto/create-booking.dto";
+import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { UpdateBookingDto } from "./dto/update-booking.dto";
 import { UpdateBookingStatusDto } from "./dto/update-booking-status.dto";
-import { UpdatePaymentStatusDto } from "./dto/update-payment-status.dto";
 
 @Injectable()
 export class BookingsService {
@@ -23,6 +24,21 @@ export class BookingsService {
 
   private normalizeServiceType(serviceType: ServiceType) {
     return serviceType;
+  }
+
+  private derivePaymentStatus(
+    fare: Prisma.Decimal,
+    totalPaid: Prisma.Decimal,
+  ): PaymentStatus {
+    if (totalPaid.lte(0)) {
+      return PaymentStatus.UNPAID;
+    }
+
+    if (totalPaid.gte(fare)) {
+      return PaymentStatus.PAID;
+    }
+
+    return PaymentStatus.PARTIALLY_PAID;
   }
 
   private async ensureCustomer(customerId: string) {
@@ -181,6 +197,11 @@ export class BookingsService {
           },
         },
         vehicle: true,
+        payments: {
+          orderBy: {
+            paidAt: "desc",
+          },
+        },
       },
       orderBy: {
         pickupDate: "asc",
@@ -217,6 +238,11 @@ export class BookingsService {
           },
         },
         vehicle: true,
+        payments: {
+          orderBy: {
+            paidAt: "desc",
+          },
+        },
       },
     });
 
@@ -355,6 +381,40 @@ export class BookingsService {
       );
     }
 
+    let recalculatedPaymentStatus:
+      | PaymentStatus
+      | undefined;
+
+    if (dto.fare !== undefined) {
+      const paymentAggregate =
+        await this.prisma.payment.aggregate({
+          where: {
+            bookingId: id,
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+
+      const totalPaid = new Prisma.Decimal(
+        paymentAggregate._sum.amount ?? 0,
+      );
+
+      const nextFare = new Prisma.Decimal(dto.fare);
+
+      if (totalPaid.gt(nextFare)) {
+        throw new BadRequestException(
+          "Booking fare cannot be reduced below the amount already paid.",
+        );
+      }
+
+      recalculatedPaymentStatus =
+        this.derivePaymentStatus(
+          nextFare,
+          totalPaid,
+        );
+    }
+
     const resultingDriverId =
       dto.driverId !== undefined
         ? dto.driverId || null
@@ -421,6 +481,9 @@ export class BookingsService {
         }),
         ...(dto.fare !== undefined && {
           fare: new Prisma.Decimal(dto.fare),
+        }),
+        ...(recalculatedPaymentStatus !== undefined && {
+          paymentStatus: recalculatedPaymentStatus,
         }),
         ...(dto.serviceType !== undefined && {
           serviceType: this.normalizeServiceType(dto.serviceType),
@@ -571,17 +634,166 @@ export class BookingsService {
     });
   }
 
-  async updatePaymentStatus(
-    id: string,
-    dto: UpdatePaymentStatusDto,
+  async recordPayment(
+    bookingId: string,
+    dto: CreatePaymentDto,
   ) {
-    await this.findOne(id);
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: {
+          id: bookingId,
+        },
+        select: {
+          id: true,
+          fare: true,
+          status: true,
+        },
+      });
 
-    return this.prisma.booking.update({
-      where: { id },
-      data: {
-        paymentStatus: dto.paymentStatus,
-      },
+      if (!booking) {
+        throw new NotFoundException(
+          "Booking not found.",
+        );
+      }
+
+      if (booking.status === BookingStatus.CANCELLED) {
+        throw new BadRequestException(
+          "Payments cannot be recorded against a cancelled booking.",
+        );
+      }
+
+      const aggregate = await tx.payment.aggregate({
+        where: {
+          bookingId,
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      const totalPaid = new Prisma.Decimal(
+        aggregate._sum.amount ?? 0,
+      );
+
+      const amount = new Prisma.Decimal(dto.amount);
+      const fare = new Prisma.Decimal(booking.fare);
+      const remaining = fare.minus(totalPaid);
+
+      if (remaining.lte(0)) {
+        throw new BadRequestException(
+          "This booking has already been fully paid.",
+        );
+      }
+
+      if (amount.gt(remaining)) {
+        throw new BadRequestException(
+          `Payment exceeds the outstanding balance of TZS ${remaining.toFixed(2)}.`,
+        );
+      }
+
+      const newTotalPaid = totalPaid.plus(amount);
+
+      const paymentStatus =
+        this.derivePaymentStatus(
+          fare,
+          newTotalPaid,
+        );
+
+      const payment = await tx.payment.create({
+        data: {
+          bookingId,
+          amount,
+          method: dto.method,
+          reference: dto.reference?.trim() || null,
+          paidAt: dto.paidAt
+            ? new Date(dto.paidAt)
+            : new Date(),
+          notes: dto.notes?.trim() || null,
+        },
+      });
+
+      await tx.booking.update({
+        where: {
+          id: bookingId,
+        },
+        data: {
+          paymentStatus,
+        },
+      });
+
+      return payment;
+    });
+  }
+
+  async deletePayment(
+    bookingId: string,
+    paymentId: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: {
+          id: bookingId,
+        },
+        select: {
+          id: true,
+          fare: true,
+        },
+      });
+
+      if (!booking) {
+        throw new NotFoundException(
+          "Booking not found.",
+        );
+      }
+
+      const payment = await tx.payment.findFirst({
+        where: {
+          id: paymentId,
+          bookingId,
+        },
+      });
+
+      if (!payment) {
+        throw new NotFoundException(
+          "Payment record not found.",
+        );
+      }
+
+      const deleted = await tx.payment.delete({
+        where: {
+          id: paymentId,
+        },
+      });
+
+      const aggregate = await tx.payment.aggregate({
+        where: {
+          bookingId,
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      const totalPaid = new Prisma.Decimal(
+        aggregate._sum.amount ?? 0,
+      );
+
+      const paymentStatus =
+        this.derivePaymentStatus(
+          new Prisma.Decimal(booking.fare),
+          totalPaid,
+        );
+
+      await tx.booking.update({
+        where: {
+          id: bookingId,
+        },
+        data: {
+          paymentStatus,
+        },
+      });
+
+      return deleted;
     });
   }
 

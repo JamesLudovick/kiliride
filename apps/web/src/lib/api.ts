@@ -313,6 +313,35 @@ export type PaymentStatus =
   | "PARTIALLY_PAID"
   | "PAID";
 
+export type PaymentMethod =
+  | "CASH"
+  | "MPESA"
+  | "AIRTEL_MONEY"
+  | "MIXX_BY_YAS"
+  | "BANK_TRANSFER"
+  | "CARD"
+  | "OTHER";
+
+export interface Payment {
+  id: string;
+  bookingId: string;
+  amount: string | number;
+  method: PaymentMethod;
+  reference: string | null;
+  paidAt: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePaymentInput {
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+  paidAt?: string;
+  notes?: string;
+}
+
 
 export type BookingServiceType =
   | "AIRPORT_TRANSFER"
@@ -349,6 +378,7 @@ export interface Booking {
 
   status: BookingStatus;
   paymentStatus: PaymentStatus;
+  payments: Payment[];
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -474,14 +504,29 @@ export function updateBookingStatus(
   });
 }
 
-export function updateBookingPaymentStatus(
-  id: string,
-  paymentStatus: PaymentStatus,
+export function createBookingPayment(
+  bookingId: string,
+  data: CreatePaymentInput,
 ) {
-  return authenticatedRequest<Booking>(`/bookings/${id}/payment-status`, {
-    method: "PATCH",
-    body: JSON.stringify({ paymentStatus }),
-  });
+  return authenticatedRequest<Payment>(
+    `/bookings/${bookingId}/payments`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export function deleteBookingPayment(
+  bookingId: string,
+  paymentId: string,
+) {
+  return authenticatedRequest<Payment>(
+    `/bookings/${bookingId}/payments/${paymentId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function cancelBooking(id: string) {
