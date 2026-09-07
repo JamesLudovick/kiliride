@@ -1,11 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
-  ArrowLeft,
   CheckCircle2,
+  CircleDot,
+  IdCard,
   Loader2,
+  Mail,
+  Pencil,
+  Phone,
   Plus,
+  Search,
   ShieldCheck,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   createDriver,
@@ -51,6 +57,7 @@ export function DriversPage() {
   const [error, setError] = useState("");
 
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -118,6 +125,7 @@ export function DriversPage() {
       setEmail("");
       setPhone("");
       setLicenseNumber("");
+      setShowForm(false);
 
       await loadDrivers();
     } catch (err) {
@@ -149,25 +157,26 @@ export function DriversPage() {
 
 
   function startEditing(driver: Driver) {
-  setEditingDriver(driver);
-  setName(driver.name);
-  setEmail(driver.email);
-  setPhone(driver.phone ?? "");
-  setLicenseNumber(driver.licenseNumber);
-  setError("");
-}
+    setEditingDriver(driver);
+    setName(driver.name);
+    setEmail(driver.email);
+    setPhone(driver.phone ?? "");
+    setLicenseNumber(driver.licenseNumber);
+    setError("");
+    setShowForm(true);
+  }
 
+  function cancelEditing() {
+    setEditingDriver(null);
+    setName("");
+    setEmail("");
+    setPhone("");
+    setLicenseNumber("");
+    setError("");
+    setShowForm(false);
+  }
 
-function cancelEditing() {
-  setEditingDriver(null);
-  setName("");
-  setEmail("");
-  setPhone("");
-  setLicenseNumber("");
-  setError("");
-}
-
-async function handleUpdateDriver(event: FormEvent) {
+  async function handleUpdateDriver(event: FormEvent) {
   event.preventDefault();
 
   if (!editingDriver) {
@@ -205,6 +214,21 @@ async function handleUpdateDriver(event: FormEvent) {
 
 
 
+  const driverStats = {
+    total: drivers.length,
+    available: drivers.filter(
+      (driver) => driver.availability === "AVAILABLE",
+    ).length,
+    onTrip: drivers.filter(
+      (driver) => driver.availability === "ON_TRIP",
+    ).length,
+    unavailable: drivers.filter(
+      (driver) =>
+        driver.availability === "UNAVAILABLE" ||
+        driver.availability === "OFF_DUTY",
+    ).length,
+  };
+
   if (!user || !["ADMIN", "STAFF"].includes(user.role)) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
@@ -220,85 +244,178 @@ async function handleUpdateDriver(event: FormEvent) {
   }
 
   return (
-    <main className="min-h-screen">
-      <header className="kr-page-header sticky top-0 z-20">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
-          <div>
-            <button
-              className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground"
-              onClick={() => {
-                window.location.href = "/dashboard";
-              }}
-              type="button"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to dashboard
-            </button>
+    <div className="space-y-5">
+      {/* Driver workspace toolbar */}
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+              <ShieldCheck size={13} />
+              Driver workspace
+            </span>
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <UserRound className="h-5 w-5" />
+            {!loading && (
+              <span className="text-xs font-medium text-slate-400">
+                {drivers.length} driver{drivers.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Manage driver profiles, contact details and daily availability.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (showForm) {
+              cancelEditing();
+            } else {
+              setShowForm(true);
+            }
+          }}
+          className={
+            showForm
+              ? "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              : "kr-button-primary shrink-0"
+          }
+        >
+          {showForm ? (
+            <>
+              <X size={17} />
+              Close form
+            </>
+          ) : (
+            <>
+              <Plus size={17} />
+              Add driver
+            </>
+          )}
+        </button>
+      </section>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm font-medium text-red-700 shadow-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Driver statistics */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Total drivers
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {driverStats.total}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Registered drivers
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
+              <UserRound size={19} />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Available
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {driverStats.available}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Ready for assignment
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
+              <CheckCircle2 size={19} />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-sky-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                On trip
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {driverStats.onTrip}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Currently operating
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-sky-50 text-sky-700">
+              <CircleDot size={19} />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-200/70 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Unavailable
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {driverStats.unavailable}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Off duty or unavailable
+              </p>
+            </div>
+
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
+              <ShieldCheck size={19} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Add/edit driver */}
+      {showForm && (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 to-white px-5 py-5 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-white shadow-sm">
+                {editingDriver ? <Pencil size={18} /> : <Plus size={19} />}
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  KiliRide Operations
+                <h2 className="text-lg font-bold text-slate-950">
+                  {editingDriver ? "Edit driver" : "Add a driver"}
+                </h2>
+
+                <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
+                  {editingDriver
+                    ? `Update the contact and licence information for ${editingDriver.name}.`
+                    : "Create a KiliRide driver profile with contact and licence details."}
                 </p>
-                <h1 className="text-xl font-bold tracking-tight">
-                  Driver Management
-                </h1>
               </div>
             </div>
           </div>
 
-          <div className="hidden items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-medium sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Driver system online
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl space-y-6 px-5 py-6">
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <section className="kr-card overflow-hidden">
-          <div className="border-b bg-gradient-to-r from-primary/[0.07] via-transparent to-secondary/[0.08] px-5 py-5">
-            <div className="flex items-center gap-2">
-              {editingDriver ? (
-  <>
-    <UserRound className="h-4 w-4 text-primary" />
-    <h2 className="font-bold">Edit driver</h2>
-  </>
-) : (
-  <>
-    <Plus className="h-4 w-4 text-primary" />
-    <h2 className="font-bold">Add driver</h2>
-  </>
-)}
-
-            </div>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-  {editingDriver
-    ? "Update the driver's contact and licence information."
-    : "Create a driver profile with the driver's basic contact and licence information."}
-</p>
-
-          </div>
-
           <form
-            className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4"
+            className="grid gap-x-5 gap-y-5 p-5 sm:p-6 md:grid-cols-2 xl:grid-cols-4"
             onSubmit={editingDriver ? handleUpdateDriver : handleSubmit}
           >
             <label className="kr-label">
-              Full name
+              Full name *
               <input
                 className="kr-input"
-                placeholder="e.g. John Mwangi"
+                placeholder="e.g. Joseph Mushi"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required
@@ -306,11 +423,11 @@ async function handleUpdateDriver(event: FormEvent) {
             </label>
 
             <label className="kr-label">
-              Email
+              Email *
               <input
                 className="kr-input"
                 type="email"
-                placeholder="driver@example.com"
+                placeholder="driver@kiliride.co.tz"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -328,7 +445,7 @@ async function handleUpdateDriver(event: FormEvent) {
             </label>
 
             <label className="kr-label">
-              Licence number
+              Licence number *
               <input
                 className="kr-input"
                 placeholder="Driver licence number"
@@ -338,76 +455,75 @@ async function handleUpdateDriver(event: FormEvent) {
               />
             </label>
 
-            <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">
-  <button
-    className="kr-button-primary"
-    disabled={saving}
-    type="submit"
-  >
-    {saving ? (
-      <Loader2 className="h-4 w-4 animate-spin" />
-    ) : editingDriver ? (
-      <CheckCircle2 className="h-4 w-4" />
-    ) : (
-      <Plus className="h-4 w-4" />
-    )}
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end md:col-span-2 xl:col-span-4">
+              <button
+                type="button"
+                onClick={cancelEditing}
+                disabled={saving}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
 
-    {saving
-      ? editingDriver
-        ? "Saving changes..."
-        : "Creating driver..."
-      : editingDriver
-        ? "Save changes"
-        : "Add driver"}
-  </button>
-
-  {editingDriver && (
-    <button
-      type="button"
-      onClick={cancelEditing}
-      disabled={saving}
-      className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-    >
-      Cancel
-    </button>
-  )}
-</div>
-
+              <button
+                className="kr-button-primary min-w-[150px]"
+                disabled={saving}
+                type="submit"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={17} className="animate-spin" />
+                    {editingDriver ? "Saving..." : "Creating..."}
+                  </>
+                ) : editingDriver ? (
+                  <>
+                    <CheckCircle2 size={17} />
+                    Save changes
+                  </>
+                ) : (
+                  <>
+                    <Plus size={17} />
+                    Add driver
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </section>
+      )}
 
-        <section className="kr-card overflow-hidden">
-          <div className="border-b px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-bold">Drivers</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Manage driver profiles and current availability.
-                </p>
-              </div>
+      {/* Driver directory */}
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-950">
+                Driver directory
+              </h2>
 
-              <div className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">
+              <p className="mt-1 text-xs text-slate-500">
                 {filteredDrivers.length} of {drivers.length} driver
-                {drivers.length === 1 ? "" : "s"}
-              </div>
+                {drivers.length === 1 ? "" : "s"} shown
+              </p>
             </div>
-          </div>
 
-          <div className="grid gap-3 border-b bg-slate-50/50 p-5 sm:grid-cols-[1fr_auto_auto]">
-            <label className="kr-label">
-              Search drivers
-              <input
-                className="kr-input"
-                placeholder="Name, email, phone or licence"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-              />
-            </label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative min-w-0 sm:w-[330px]">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
 
-            <label className="kr-label">
-              Availability
+                <input
+                  className="kr-input pl-9"
+                  placeholder="Search name, phone, email or licence..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+
               <select
-                className="kr-select"
+                className="kr-select sm:w-[185px]"
                 value={availabilityFilter}
                 onChange={(event) =>
                   setAvailabilityFilter(
@@ -415,114 +531,201 @@ async function handleUpdateDriver(event: FormEvent) {
                   )
                 }
               >
-                <option value="ALL">All drivers</option>
+                <option value="ALL">All availability</option>
                 <option value="AVAILABLE">Available</option>
                 <option value="UNAVAILABLE">Unavailable</option>
                 <option value="ON_TRIP">On trip</option>
                 <option value="OFF_DUTY">Off duty</option>
               </select>
-            </label>
+            </div>
+          </div>
+        </div>
 
-            <div className="flex items-end">
-              {(searchTerm || availabilityFilter !== "ALL") && (
+        {loading ? (
+          <div className="flex min-h-[220px] items-center justify-center">
+            <div className="text-center">
+              <Loader2
+                size={25}
+                className="mx-auto animate-spin text-primary"
+              />
+              <p className="mt-3 text-sm font-medium text-slate-500">
+                Loading drivers...
+              </p>
+            </div>
+          </div>
+        ) : filteredDrivers.length === 0 ? (
+          <div className="flex min-h-[260px] items-center justify-center px-5 py-10">
+            <div className="max-w-md text-center">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-primary">
+                <UserRound size={25} />
+              </div>
+
+              <h3 className="mt-4 text-base font-bold text-slate-900">
+                {drivers.length === 0
+                  ? "No drivers yet"
+                  : "No matching drivers"}
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+                {drivers.length === 0
+                  ? "Create the first KiliRide driver profile to begin managing assignments and availability."
+                  : "No driver matches the current search or availability filter."}
+              </p>
+
+              {drivers.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="kr-button-primary mt-5"
+                >
+                  <Plus size={17} />
+                  Add first driver
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={() => {
                     setSearchTerm("");
                     setAvailabilityFilter("ALL");
                   }}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  className="mt-5 inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   Clear filters
                 </button>
               )}
             </div>
           </div>
+        ) : (
+          <div className="grid gap-4 p-4 md:grid-cols-2 2xl:grid-cols-3">
+            {filteredDrivers.map((driver) => {
+              const initials = driver.name
+                .split(" ")
+                .filter(Boolean)
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase();
 
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading drivers...
-            </div>
-          ) : drivers.length === 0 ? (
-            <div className="p-10 text-center">
-              <UserRound className="mx-auto h-8 w-8 text-slate-300" />
-              <p className="mt-3 font-semibold">No drivers yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Add your first driver using the form above.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {filteredDrivers.map((driver) => (
-                <div
+              return (
+                <article
                   key={driver.id}
-                  className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between"
+                  className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-950/5"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <UserRound className="h-5 w-5" />
-                    </div>
+                  <div className="border-b border-slate-100 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e8f6f1] text-sm font-black text-primary">
+                          {initials || "DR"}
+                        </div>
 
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold">{driver.name}</h3>
+                        <div className="min-w-0">
+                          <h3 className="truncate font-bold text-slate-950">
+                            {driver.name}
+                          </h3>
 
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${availabilityStyles[driver.availability]}`}
-                        >
-                          {formatAvailability(driver.availability)}
-                        </span>
+                          <p className="mt-1 text-xs font-medium text-slate-400">
+                            KiliRide Driver
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                        <p>{driver.email}</p>
-                        <p>
-                          {driver.phone || "No phone"} · Licence:{" "}
+                      <select
+                        className={`max-w-[140px] rounded-full border-0 px-2.5 py-1.5 text-[11px] font-bold outline-none ${availabilityStyles[driver.availability]}`}
+                        value={driver.availability}
+                        onChange={(event) =>
+                          void handleAvailabilityChange(
+                            driver.id,
+                            event.target.value as DriverAvailability,
+                          )
+                        }
+                      >
+                        <option value="AVAILABLE">Available</option>
+                        <option value="UNAVAILABLE">Unavailable</option>
+                        <option value="ON_TRIP">On trip</option>
+                        <option value="OFF_DUTY">Off duty</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 px-5 py-4">
+                    <div className="flex items-start gap-3">
+                      <Mail
+                        size={15}
+                        className="mt-0.5 shrink-0 text-slate-400"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                          Email
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-medium text-slate-700">
+                          {driver.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Phone
+                        size={15}
+                        className="mt-0.5 shrink-0 text-slate-400"
+                      />
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                          Phone
+                        </p>
+                        <p className="mt-0.5 text-sm font-medium text-slate-700">
+                          {driver.phone || "Not provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <IdCard
+                        size={15}
+                        className="mt-0.5 shrink-0 text-slate-400"
+                      />
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                          Licence
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold text-slate-700">
                           {driver.licenseNumber}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      className="kr-select min-w-40"
-                      value={driver.availability}
-                      onChange={(event) =>
-                        void handleAvailabilityChange(
-                          driver.id,
-                          event.target.value as DriverAvailability,
-                        )
-                      }
-                    >
-                      <option value="AVAILABLE">Available</option>
-                      <option value="UNAVAILABLE">Unavailable</option>
-                      <option value="ON_TRIP">On trip</option>
-                      <option value="OFF_DUTY">Off duty</option>
-                    </select>
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-4">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          driver.availability === "AVAILABLE"
+                            ? "bg-emerald-500"
+                            : driver.availability === "ON_TRIP"
+                              ? "bg-sky-500"
+                              : driver.availability === "UNAVAILABLE"
+                                ? "bg-red-500"
+                                : "bg-slate-400"
+                        }`}
+                      />
 
-                    {driver.availability === "AVAILABLE" && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Ready
-                      </span>
-                    )} 
+                      {formatAvailability(driver.availability)}
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => startEditing(driver)}
-                      className="rounded-lg border border-slate-200 px-3 py-2"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-primary"
                     >
+                      <Pencil size={14} />
                       Edit
                     </button>
-
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
