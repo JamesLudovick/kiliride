@@ -20,6 +20,7 @@ import {
   Vehicle,
   cancelBooking,
   createBooking,
+  createCustomer,
   getBookings,
   getCustomers,
   getDrivers,
@@ -102,6 +103,13 @@ export function BookingsPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
+  const [showQuickCustomer, setShowQuickCustomer] = useState(false);
+  const [customerSaving, setCustomerSaving] = useState(false);
+  const [quickCustomerError, setQuickCustomerError] = useState("");
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerEmail, setNewCustomerEmail] = useState("");
+
   const [driverId, setDriverId] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [pickupLocation, setPickupLocation] = useState("");
@@ -144,6 +152,12 @@ export function BookingsPage() {
 
   function resetForm() {
     setCustomerId("");
+    setShowQuickCustomer(false);
+    setQuickCustomerError("");
+    setNewCustomerName("");
+    setNewCustomerPhone("");
+    setNewCustomerEmail("");
+
     setDriverId("");
     setVehicleId("");
     setPickupLocation("");
@@ -153,6 +167,57 @@ export function BookingsPage() {
     setPassengerCount("1");
     setFare("");
     setNotes("");
+  }
+
+  async function handleQuickCustomerCreate() {
+    const customerName = newCustomerName.trim();
+
+    if (!customerName) {
+      setQuickCustomerError("Customer name is required.");
+      return;
+    }
+
+    try {
+      setCustomerSaving(true);
+      setQuickCustomerError("");
+      setError("");
+      setSuccess("");
+
+      const created = await createCustomer({
+        name: customerName,
+        ...(newCustomerPhone.trim()
+          ? { phone: newCustomerPhone.trim() }
+          : {}),
+        ...(newCustomerEmail.trim()
+          ? { email: newCustomerEmail.trim() }
+          : {}),
+      });
+
+      setCustomers((current) =>
+        [...current, created].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      );
+
+      setCustomerId(created.id);
+
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewCustomerEmail("");
+      setShowQuickCustomer(false);
+
+      setSuccess(
+        `${created.name} was created and selected for this booking.`,
+      );
+    } catch (err) {
+      setQuickCustomerError(
+        err instanceof Error
+          ? err.message
+          : "Unable to create customer.",
+      );
+    } finally {
+      setCustomerSaving(false);
+    }
   }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -452,25 +517,186 @@ export function BookingsPage() {
             onSubmit={handleCreate}
             className="grid gap-x-5 gap-y-5 p-5 sm:p-6 lg:grid-cols-12"
           >
-            <label className="kr-label lg:col-span-6">
-              Customer *
+            <div className="lg:col-span-6">
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <label
+                  htmlFor="booking-customer"
+                  className="text-sm font-semibold text-slate-800"
+                >
+                  Customer *
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickCustomerError("");
+                    setShowQuickCustomer((value) => !value);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-primary transition hover:text-emerald-800"
+                >
+                  {showQuickCustomer ? (
+                    <>
+                      <X size={13} />
+                      Cancel new customer
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={13} />
+                      New customer
+                    </>
+                  )}
+                </button>
+              </div>
+
               <select
+                id="booking-customer"
                 required
                 value={customerId}
-                onChange={(event) => setCustomerId(event.target.value)}
+                onChange={(event) => {
+                  setCustomerId(event.target.value);
+                  setQuickCustomerError("");
+                }}
                 className="kr-select"
               >
-                <option value="">Select customer</option>
+                <option value="">
+                  {customers.length === 0
+                    ? "No customers yet"
+                    : "Select customer"}
+                </option>
+
                 {customers.map((customer) => (
                   <option key={customer.id} value={customer.id}>
-                    {customer.name} — {customer.email ?? customer.phone ?? "No contact"}
+                    {customer.name} —{" "}
+                    {customer.phone ??
+                      customer.email ??
+                      "No contact"}
                   </option>
                 ))}
               </select>
+
               <span className="kr-help">
-                Select an existing KiliRide customer.
+                Select an existing customer or create one without leaving
+                this booking.
               </span>
-            </label>
+
+              {showQuickCustomer && (
+                <div
+                  className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleQuickCustomerCreate();
+                    }
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        New customer
+                      </p>
+
+                      <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                        Create the customer now and KiliRide will select them
+                        automatically for this booking.
+                      </p>
+                    </div>
+
+                    <UsersRound
+                      size={18}
+                      className="shrink-0 text-primary"
+                    />
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <label className="kr-label">
+                      Name *
+                      <input
+                        value={newCustomerName}
+                        onChange={(event) =>
+                          setNewCustomerName(event.target.value)
+                        }
+                        className="kr-input bg-white"
+                        placeholder="e.g. John Massawe"
+                      />
+                    </label>
+
+                    <label className="kr-label">
+                      Phone
+                      <input
+                        value={newCustomerPhone}
+                        onChange={(event) =>
+                          setNewCustomerPhone(event.target.value)
+                        }
+                        className="kr-input bg-white"
+                        placeholder="+255 7..."
+                      />
+                    </label>
+
+                    <label className="kr-label">
+                      Email
+                      <input
+                        type="email"
+                        value={newCustomerEmail}
+                        onChange={(event) =>
+                          setNewCustomerEmail(event.target.value)
+                        }
+                        className="kr-input bg-white"
+                        placeholder="Optional"
+                      />
+                    </label>
+                  </div>
+
+                  {quickCustomerError && (
+                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                      {quickCustomerError}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      disabled={customerSaving}
+                      onClick={() => {
+                        setShowQuickCustomer(false);
+                        setQuickCustomerError("");
+                        setNewCustomerName("");
+                        setNewCustomerPhone("");
+                        setNewCustomerEmail("");
+                      }}
+                      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        customerSaving || !newCustomerName.trim()
+                      }
+                      onClick={() =>
+                        void handleQuickCustomerCreate()
+                      }
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {customerSaving ? (
+                        <>
+                          <Loader2
+                            size={14}
+                            className="animate-spin"
+                          />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={14} />
+                          Create & select
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <label className="kr-label lg:col-span-3">
               Driver

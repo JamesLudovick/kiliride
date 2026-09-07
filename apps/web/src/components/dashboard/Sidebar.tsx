@@ -37,11 +37,15 @@ const mainNavigation = [
   },
 ];
 
-const comingSoon = [
+const managementNavigation = [
   {
     label: "Customers",
+    href: "/dashboard/customers",
     icon: UsersRound,
   },
+];
+
+const comingSoon = [
   {
     label: "Calendar",
     icon: CalendarRange,
@@ -83,6 +87,7 @@ export function Sidebar() {
             <div className="text-lg font-black tracking-[0.18em] text-white">
               KILIRIDE
             </div>
+
             <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-100/60">
               Operations
             </div>
@@ -120,17 +125,32 @@ export function Sidebar() {
         </div>
 
         <div>
-          <div className="mb-3 flex items-center justify-between px-3">
+          <div className="mb-3 px-3">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-100/40">
               Management
             </span>
-
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-50/60">
-              Soon
-            </span>
           </div>
 
-          <div className="space-y-1">
+          <nav className="space-y-1.5">
+            {managementNavigation.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  className={({ isActive }: { isActive: boolean }) =>
+                    `kr-sidebar-item ${
+                      isActive ? "kr-sidebar-item-active" : ""
+                    }`
+                  }
+                >
+                  <Icon size={18} strokeWidth={2} />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+
             {comingSoon.map((item) => {
               const Icon = item.icon;
 
@@ -140,11 +160,16 @@ export function Sidebar() {
                   className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-emerald-50/35"
                 >
                   <Icon size={18} />
+
                   <span>{item.label}</span>
+
+                  <span className="ml-auto rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-50/35">
+                    Soon
+                  </span>
                 </div>
               );
             })}
-          </div>
+          </nav>
         </div>
       </div>
 
@@ -164,6 +189,7 @@ export function Sidebar() {
               <div className="truncate text-sm font-semibold text-white">
                 {user?.name ?? "KiliRide user"}
               </div>
+
               <div className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-emerald-100/45">
                 {user?.role ?? "Staff"}
               </div>

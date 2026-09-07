@@ -18,6 +18,10 @@ const pageDetails: Record<
     title: "Bookings",
     description: "Manage trips, reservations and customer journeys.",
   },
+  "/dashboard/customers": {
+    title: "Customers",
+    description: "Manage customer profiles, contacts and booking relationships.",
+  },
   "/dashboard/vehicles": {
     title: "Vehicles",
     description: "Manage fleet vehicles and availability.",

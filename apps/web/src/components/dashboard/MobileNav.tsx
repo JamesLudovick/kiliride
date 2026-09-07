@@ -3,19 +3,26 @@ import {
   CalendarDays,
   Car,
   ShieldCheck,
+  UsersRound,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-const items = [
+const navigation = [
   {
     label: "Home",
     href: "/dashboard",
     icon: BarChart3,
+    end: true,
   },
   {
     label: "Bookings",
     href: "/dashboard/bookings",
     icon: CalendarDays,
+  },
+  {
+    label: "Customers",
+    href: "/dashboard/customers",
+    icon: UsersRound,
   },
   {
     label: "Vehicles",
@@ -31,26 +38,26 @@ const items = [
 
 export function MobileNav() {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl lg:hidden">
-      <div className="grid grid-cols-4 gap-1">
-        {items.map((item) => {
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden">
+      <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
+        {navigation.map((item) => {
           const Icon = item.icon;
 
           return (
             <NavLink
               key={item.href}
               to={item.href}
-              end={item.href === "/dashboard"}
+              end={item.end}
               className={({ isActive }: { isActive: boolean }) =>
-                `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10px] font-semibold transition ${
+                `flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition ${
                   isActive
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-emerald-50 text-primary"
+                    : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
                 }`
               }
             >
               <Icon size={18} />
-              <span className="truncate">{item.label}</span>
+              <span className="max-w-full truncate">{item.label}</span>
             </NavLink>
           );
         })}
