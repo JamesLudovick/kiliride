@@ -41,7 +41,11 @@ function DashboardHome() {
   }
 
   if (user.role === "ADMIN") {
-    return <AdminDashboard />;
+    return (
+      <DashboardLayout>
+        <AdminDashboard />
+      </DashboardLayout>
+    );
   }
 
   if (user.role === "STAFF") {
