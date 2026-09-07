@@ -58,6 +58,11 @@ const managementNavigation = [
     href: "/dashboard/maintenance",
     icon: Wrench,
   },
+  {
+    label: "Reports",
+    href: "/dashboard/reports",
+    icon: BarChart3,
+  },
 ];
 
 export function Sidebar() {

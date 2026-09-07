@@ -12,6 +12,7 @@ import { CustomersPage } from "./pages/CustomersPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { MaintenancePage } from "./pages/MaintenancePage";
 import { CalendarPage } from "./pages/CalendarPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { LoginPage } from "./pages/LoginPage";
 
 import {
@@ -128,6 +129,15 @@ function App() {
         element={
           <OperationsPage>
             <CalendarPage />
+          </OperationsPage>
+        }
+      />
+
+      <Route
+        path="/dashboard/reports"
+        element={
+          <OperationsPage>
+            <ReportsPage />
           </OperationsPage>
         }
       />

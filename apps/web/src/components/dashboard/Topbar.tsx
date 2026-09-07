@@ -34,6 +34,10 @@ const pageDetails: Record<
     title: "Maintenance",
     description: "Manage fleet servicing, repairs and maintenance history.",
   },
+  "/dashboard/reports": {
+    title: "Reports",
+    description: "Analyse revenue, bookings, customers and fleet performance.",
+  },
   "/dashboard/vehicles": {
     title: "Vehicles",
     description: "Manage fleet vehicles and availability.",
