@@ -12,6 +12,7 @@ import {
   createVehicle,
   deleteVehicle,
   getVehicles,
+  updateVehicle,
   updateVehicleStatus,
   Vehicle,
 } from "../lib/api";
@@ -52,6 +53,7 @@ export function VehiclesPage() {
   const [year, setYear] = useState("");
   const [color, setColor] = useState("");
   const [type, setType] = useState<Vehicle["type"]>("SUV");
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   async function loadVehicles() {
     try {
@@ -72,6 +74,17 @@ export function VehiclesPage() {
   useEffect(() => {
     void loadVehicles();
   }, []);
+
+  function startEditing(vehicle: Vehicle) {
+    setEditingVehicle(vehicle);
+    setRegistrationNumber(vehicle.registrationNumber);
+    setMake(vehicle.make);
+    setModel(vehicle.model);
+    setYear(String(vehicle.year));
+    setColor(vehicle.color ?? "");
+    setType(vehicle.type);
+    setError("");
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -100,6 +113,55 @@ export function VehiclesPage() {
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to create vehicle.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelEditing() {
+    setEditingVehicle(null);
+    setRegistrationNumber("");
+    setMake("");
+    setModel("");
+    setYear("");
+    setColor("");
+    setType("SUV");
+    setError("");
+  }
+
+  async function handleUpdateVehicle(event: FormEvent) {
+    event.preventDefault();
+
+    if (!editingVehicle) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const updated = await updateVehicle(editingVehicle.id, {
+        registrationNumber,
+        make,
+        model,
+        year: Number(year),
+        color: color || undefined,
+        type,
+      });
+
+      setVehicles((current) =>
+        current.map((vehicle) =>
+          vehicle.id === updated.id ? updated : vehicle,
+        ),
+      );
+
+      cancelEditing();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update vehicle.",
       );
     } finally {
       setSaving(false);
@@ -210,24 +272,41 @@ export function VehiclesPage() {
             <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <div>
                 <div className="flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" />
-                  <h2 className="font-bold">Add vehicle</h2>
+                  {editingVehicle ? (
+                    <Car className="h-4 w-4 text-primary" />
+                  ) : (
+                    <Plus className="h-4 w-4 text-primary" />
+                  )}
+
+                  <h2 className="font-bold">
+                    {editingVehicle ? "Edit vehicle" : "Add vehicle"}
+                  </h2>
                 </div>
 
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Add the basic details exactly as they appear on the vehicle documents.
+                  {editingVehicle
+                    ? "Update the vehicle details and save your changes."
+                    : "Add the basic details exactly as they appear on the vehicle documents."}
                 </p>
               </div>
 
               <div className="hidden rounded-lg border bg-card px-3 py-2 text-[11px] text-muted-foreground md:block">
-                Example: <strong>T 123 ABC</strong> · Toyota · Land Cruiser
+                {editingVehicle ? (
+                  <>
+                    Editing: <strong>{editingVehicle.registrationNumber}</strong>
+                  </>
+                ) : (
+                  <>
+                    Example: <strong>T 123 ABC</strong> · Toyota · Land Cruiser
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           <form
             className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3"
-            onSubmit={handleSubmit}
+            onSubmit={editingVehicle ? handleUpdateVehicle : handleSubmit}
           >
             <label className="kr-label">
               Registration number
@@ -313,7 +392,18 @@ export function VehiclesPage() {
               <span className="kr-help">Choose the closest category</span>
             </label>
 
-            <div className="flex items-end lg:col-span-3 lg:justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end lg:col-span-3 lg:justify-end">
+              {editingVehicle && (
+                <button
+                  className="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium transition hover:bg-slate-50 sm:w-auto"
+                  disabled={saving}
+                  onClick={cancelEditing}
+                  type="button"
+                >
+                  Cancel edit
+                </button>
+              )}
+
               <button
                 className="kr-button-primary w-full sm:w-auto"
                 disabled={saving}
@@ -321,10 +411,19 @@ export function VehiclesPage() {
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : editingVehicle ? (
+                  <CheckCircle2 className="h-4 w-4" />
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
-                {saving ? "Adding vehicle..." : "Add vehicle"}
+
+                {saving
+                  ? editingVehicle
+                    ? "Saving changes..."
+                    : "Adding vehicle..."
+                  : editingVehicle
+                    ? "Save changes"
+                    : "Add vehicle"}
               </button>
             </div>
           </form>
@@ -445,14 +544,24 @@ export function VehiclesPage() {
                       </td>
 
                       <td className="px-5 py-4 text-right">
-                        <button
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                          onClick={() => void handleDelete(vehicle.id)}
-                          type="button"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Remove
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-2.5 text-xs font-medium transition hover:bg-muted"
+                            onClick={() => startEditing(vehicle)}
+                            type="button"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                            onClick={() => void handleDelete(vehicle.id)}
+                            type="button"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

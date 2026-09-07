@@ -25,8 +25,12 @@ export function saveAuthSession(auth: AuthResponse) {
   localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
 }
 
-export function getAccessToken() {
+export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function getStoredUser(): AuthUser | null {
@@ -42,6 +46,10 @@ export function getStoredUser(): AuthUser | null {
     clearAuthSession();
     return null;
   }
+}
+
+export function isStaffOrAdmin(user: AuthUser | null): boolean {
+  return user?.role === "ADMIN" || user?.role === "STAFF";
 }
 
 export function clearAuthSession() {

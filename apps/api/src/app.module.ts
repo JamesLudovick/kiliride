@@ -4,7 +4,9 @@ import { AuthModule } from "./auth/auth.module";
 import { HealthController } from "./health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
-import { VehiclesModule } from './vehicles/vehicles.module';
+import { VehiclesModule } from "./vehicles/vehicles.module";
+import { DriversModule } from "./drivers/drivers.module";
+import { BookingsModule } from "./bookings/bookings.module";
 
 @Module({
   imports: [
@@ -14,7 +16,9 @@ import { VehiclesModule } from './vehicles/vehicles.module';
     PrismaModule,
     UsersModule,
     AuthModule,
-    VehiclesModule
+    VehiclesModule,
+    DriversModule,
+    BookingsModule
   ],
   controllers: [HealthController]
 })

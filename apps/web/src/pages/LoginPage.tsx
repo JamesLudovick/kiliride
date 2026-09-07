@@ -11,8 +11,8 @@ import { login } from "../lib/api";
 import { saveAuthSession } from "../lib/auth";
 
 export function LoginPage() {
-  const [email, setEmail] = useState("admin@kiliride.local");
-  const [password, setPassword] = useState("AdminPassword123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -183,17 +183,7 @@ export function LoginPage() {
                 {isSubmitting ? "Signing in..." : "Sign in to dashboard"}
               </button>
             </form>
-
-            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs font-bold text-amber-900">
-                Development account
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-amber-800">
-                The seeded admin account is already filled in for local
-                development.
-              </p>
-            </div>
+            
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-400">

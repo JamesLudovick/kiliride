@@ -16,4 +16,30 @@ export class UsersService {
       where: { id }
     });
   }
+  findCustomers() {
+    return this.prisma.customerProfile.findMany({
+      where: {
+        user: {
+          role: "CUSTOMER",
+          status: "ACTIVE",
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+      orderBy: {
+        user: {
+          name: "asc",
+        },
+      },
+    });
+  }
+
 }

@@ -2,8 +2,15 @@ import { PublicHome } from "./components/PublicHome";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { StaffDashboard } from "./pages/StaffDashboard";
 import { VehiclesPage } from "./pages/VehiclesPage";
+import { DriversPage } from "./pages/DriversPage";
+import { BookingsPage } from "./pages/BookingsPage";
 import { LoginPage } from "./pages/LoginPage";
-import { getStoredUser } from "./lib/auth";
+import { getStoredUser, isStaffOrAdmin } from "./lib/auth";
+
+function redirectToLogin() {
+  window.location.href = "/login";
+  return null;
+}
 
 function App() {
   const path = window.location.pathname;
@@ -13,9 +20,40 @@ function App() {
     return <LoginPage />;
   }
 
+
+  if (path.startsWith("/dashboard/bookings")) {
+    if (!user) {
+      return redirectToLogin();
+    }
+
+    if (!isStaffOrAdmin(user)) {
+      window.location.href = "/dashboard";
+      return null;
+    }
+
+    return <BookingsPage />;
+  }
+
+  if (path.startsWith("/dashboard/drivers")) {
+    if (!user) {
+      return redirectToLogin();
+    }
+
+    if (!isStaffOrAdmin(user)) {
+      window.location.href = "/dashboard";
+      return null;
+    }
+
+    return <DriversPage />;
+  }
+
   if (path.startsWith("/dashboard/vehicles")) {
     if (!user) {
-      window.location.href = "/login";
+      return redirectToLogin();
+    }
+
+    if (!isStaffOrAdmin(user)) {
+      window.location.href = "/dashboard";
       return null;
     }
 
@@ -24,8 +62,7 @@ function App() {
 
   if (path.startsWith("/dashboard")) {
     if (!user) {
-      window.location.href = "/login";
-      return null;
+      return redirectToLogin();
     }
 
     switch (user.role) {
@@ -36,7 +73,8 @@ function App() {
         return <StaffDashboard />;
 
       default:
-        return <PublicHome />;
+        window.location.href = "/";
+        return null;
     }
   }
 
