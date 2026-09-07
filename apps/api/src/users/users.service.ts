@@ -22,8 +22,13 @@ export class UsersService {
     });
   }
 
-  findCustomers() {
+  findCustomers(includeArchived = false) {
     return this.prisma.customerProfile.findMany({
+      where: includeArchived
+        ? undefined
+        : {
+            isArchived: false,
+          },
       include: {
         user: {
           select: {
@@ -124,4 +129,71 @@ export class UsersService {
       },
     });
   }
+
+  async archiveCustomer(id: string) {
+    const existing = await this.prisma.customerProfile.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Customer not found.");
+    }
+
+    return this.prisma.customerProfile.update({
+      where: { id },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        _count: {
+          select: {
+            Booking: true,
+          },
+        },
+      },
+    });
+  }
+
+  async restoreCustomer(id: string) {
+    const existing = await this.prisma.customerProfile.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Customer not found.");
+    }
+
+    return this.prisma.customerProfile.update({
+      where: { id },
+      data: {
+        isArchived: false,
+        archivedAt: null,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        _count: {
+          select: {
+            Booking: true,
+          },
+        },
+      },
+    });
+  }
+
 }

@@ -26,12 +26,17 @@ export class BookingsService {
   }
 
   private async ensureCustomer(customerId: string) {
-    const customer = await this.prisma.customerProfile.findUnique({
-      where: { id: customerId },
+    const customer = await this.prisma.customerProfile.findFirst({
+      where: {
+        id: customerId,
+        isArchived: false,
+      },
     });
 
     if (!customer) {
-      throw new NotFoundException("Customer not found.");
+      throw new BadRequestException(
+        "Customer does not exist or has been archived.",
+      );
     }
 
     return customer;

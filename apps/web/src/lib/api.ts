@@ -273,6 +273,9 @@ export interface Customer {
   passportNumber: string | null;
   address: string | null;
 
+  isArchived: boolean;
+  archivedAt: string | null;
+
   createdAt: string;
   updatedAt: string;
 
@@ -390,8 +393,14 @@ export interface CreateBookingInput {
 export type UpdateBookingInput = Partial<CreateBookingInput>;
 
 
-export function getCustomers() {
-  return authenticatedRequest<Customer[]>("/customers");
+export function getCustomers(includeArchived = false) {
+  const suffix = includeArchived
+    ? "?includeArchived=true"
+    : "";
+
+  return authenticatedRequest<Customer[]>(
+    `/customers${suffix}`,
+  );
 }
 
 export function createCustomer(data: CreateCustomerInput) {
@@ -409,6 +418,25 @@ export function updateCustomer(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+
+export function archiveCustomer(id: string) {
+  return authenticatedRequest<Customer>(
+    `/customers/${id}/archive`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
+export function restoreCustomer(id: string) {
+  return authenticatedRequest<Customer>(
+    `/customers/${id}/restore`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function getBookings() {

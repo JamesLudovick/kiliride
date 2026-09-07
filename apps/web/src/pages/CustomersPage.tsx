@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  Archive,
   CalendarDays,
   CheckCircle2,
   IdCard,
@@ -10,6 +11,7 @@ import {
   Pencil,
   Phone,
   Plus,
+  RotateCcw,
   Search,
   ShieldCheck,
   UsersRound,
@@ -19,8 +21,10 @@ import {
 import {
   Customer,
   CreateCustomerInput,
+  archiveCustomer,
   createCustomer,
   getCustomers,
+  restoreCustomer,
   updateCustomer,
 } from "../lib/api";
 
@@ -38,13 +42,18 @@ export function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [archiveUpdatingId, setArchiveUpdatingId] =
+    useState<string | null>(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] =
     useState<Customer | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [archiveFilter, setArchiveFilter] =
+    useState<"ACTIVE" | "ARCHIVED" | "ALL">("ACTIVE");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -58,7 +67,7 @@ export function CustomersPage() {
       setLoading(true);
       setError("");
 
-      const data = await getCustomers();
+      const data = await getCustomers(true);
       setCustomers(data);
     } catch (err) {
       setError(
@@ -107,6 +116,70 @@ export function CustomersPage() {
     setLicenseNumber(customer.licenseNumber ?? "");
     setShowForm(true);
     setError("");
+  }
+
+  async function handleArchive(customer: Customer) {
+    const bookingCount = customer._count?.Booking ?? 0;
+
+    const confirmed = window.confirm(
+      bookingCount > 0
+        ? `Archive ${customer.name}? Their ${bookingCount} booking record${bookingCount === 1 ? "" : "s"} will be preserved.`
+        : `Archive ${customer.name}? They will no longer appear when creating new bookings.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setArchiveUpdatingId(customer.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      await archiveCustomer(customer.id);
+
+      if (editingCustomer?.id === customer.id) {
+        closeForm();
+      }
+
+      setSuccess(
+        `${customer.name} was archived. Booking history was preserved.`,
+      );
+
+      await loadCustomers();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to archive customer.",
+      );
+    } finally {
+      setArchiveUpdatingId(null);
+    }
+  }
+
+  async function handleRestore(customer: Customer) {
+    setArchiveUpdatingId(customer.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      await restoreCustomer(customer.id);
+
+      setSuccess(
+        `${customer.name} was restored and can be used for new bookings again.`,
+      );
+
+      await loadCustomers();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to restore customer.",
+      );
+    } finally {
+      setArchiveUpdatingId(null);
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -159,36 +232,40 @@ export function CustomersPage() {
   const filteredCustomers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
 
-    if (!query) {
-      return customers;
-    }
+    return customers.filter((customer) => {
+      const matchesArchiveFilter =
+        archiveFilter === "ALL" ||
+        (archiveFilter === "ACTIVE" && !customer.isArchived) ||
+        (archiveFilter === "ARCHIVED" && customer.isArchived);
 
-    return customers.filter((customer) =>
-      [
+      if (!matchesArchiveFilter) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return [
         customer.name,
         customer.phone,
         customer.email,
         customer.address,
         customer.licenseNumber,
         customer.passportNumber,
-      ].some((value) => value?.toLowerCase().includes(query)),
-    );
-  }, [customers, searchTerm]);
+      ].some((value) => value?.toLowerCase().includes(query));
+    });
+  }, [customers, searchTerm, archiveFilter]);
 
   const customerStats = useMemo(() => {
-    const now = new Date();
-
     return {
-      total: customers.length,
+      active: customers.filter(
+        (customer) => !customer.isArchived,
+      ).length,
 
-      newThisMonth: customers.filter((customer) => {
-        const created = new Date(customer.createdAt);
-
-        return (
-          created.getMonth() === now.getMonth() &&
-          created.getFullYear() === now.getFullYear()
-        );
-      }).length,
+      archived: customers.filter(
+        (customer) => customer.isArchived,
+      ).length,
 
       withBookings: customers.filter(
         (customer) => (customer._count?.Booking ?? 0) > 0,
@@ -260,21 +337,27 @@ export function CustomersPage() {
         </div>
       )}
 
+      {success && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm font-medium text-emerald-800 shadow-sm">
+          {success}
+        </div>
+      )}
+
       {/* Customer statistics */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
-                Total customers
+                Active customers
               </p>
 
               <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-                {customerStats.total}
+                {customerStats.active}
               </p>
 
               <p className="mt-1 text-xs text-slate-400">
-                Customer records
+                Available for bookings
               </p>
             </div>
 
@@ -288,20 +371,20 @@ export function CustomersPage() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
-                New this month
+                Archived
               </p>
 
               <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-                {customerStats.newThisMonth}
+                {customerStats.archived}
               </p>
 
               <p className="mt-1 text-xs text-slate-400">
-                Recently added
+                Preserved records
               </p>
             </div>
 
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
-              <Plus size={19} />
+              <Archive size={19} />
             </div>
           </div>
         </article>
@@ -517,18 +600,39 @@ export function CustomersPage() {
             </p>
           </div>
 
-          <div className="relative w-full lg:w-[380px]">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+            <select
+              value={archiveFilter}
+              onChange={(event) =>
+                setArchiveFilter(
+                  event.target.value as
+                    | "ACTIVE"
+                    | "ARCHIVED"
+                    | "ALL",
+                )
+              }
+              className="kr-select sm:w-[150px]"
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="ARCHIVED">Archived</option>
+              <option value="ALL">All customers</option>
+            </select>
 
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="kr-input pl-9"
-              placeholder="Search name, phone, email or ID..."
-            />
+            <div className="relative w-full lg:w-[330px]">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+
+              <input
+                value={searchTerm}
+                onChange={(event) =>
+                  setSearchTerm(event.target.value)
+                }
+                className="kr-input pl-9"
+                placeholder="Search name, phone, email or ID..."
+              />
+            </div>
           </div>
         </div>
 
@@ -589,7 +693,11 @@ export function CustomersPage() {
             {filteredCustomers.map((customer) => (
               <article
                 key={customer.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-950/5"
+                className={`overflow-hidden rounded-2xl border transition ${
+                  customer.isArchived
+                    ? "border-slate-200 bg-slate-50/70"
+                    : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-950/5"
+                }`}
               >
                 <div className="border-b border-slate-100 p-5">
                   <div className="flex items-start justify-between gap-3">
@@ -609,25 +717,32 @@ export function CustomersPage() {
                       </div>
                     </div>
 
-                    <span
-                      className={
-                        customer.userId
-                          ? "inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700"
-                          : "inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700"
-                      }
-                    >
-                      {customer.userId ? (
-                        <>
-                          <Link2 size={11} />
-                          Online
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 size={11} />
-                          Office
-                        </>
-                      )}
-                    </span>
+                    {customer.isArchived ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                        <Archive size={11} />
+                        Archived
+                      </span>
+                    ) : (
+                      <span
+                        className={
+                          customer.userId
+                            ? "inline-flex shrink-0 items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700"
+                            : "inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700"
+                        }
+                      >
+                        {customer.userId ? (
+                          <>
+                            <Link2 size={11} />
+                            Online
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={11} />
+                            Office
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -715,14 +830,59 @@ export function CustomersPage() {
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => startEditing(customer)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-primary"
-                  >
-                    <Pencil size={14} />
-                    Edit
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {!customer.isArchived && (
+                      <button
+                        type="button"
+                        disabled={archiveUpdatingId === customer.id}
+                        onClick={() => startEditing(customer)}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-primary disabled:opacity-40"
+                      >
+                        <Pencil size={14} />
+                        Edit
+                      </button>
+                    )}
+
+                    {customer.isArchived ? (
+                      <button
+                        type="button"
+                        disabled={archiveUpdatingId === customer.id}
+                        onClick={() =>
+                          void handleRestore(customer)
+                        }
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-primary transition hover:bg-emerald-50 disabled:opacity-40"
+                      >
+                        {archiveUpdatingId === customer.id ? (
+                          <Loader2
+                            size={14}
+                            className="animate-spin"
+                          />
+                        ) : (
+                          <RotateCcw size={14} />
+                        )}
+                        Restore
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={archiveUpdatingId === customer.id}
+                        onClick={() =>
+                          void handleArchive(customer)
+                        }
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-amber-700 transition hover:bg-amber-50 disabled:opacity-40"
+                      >
+                        {archiveUpdatingId === customer.id ? (
+                          <Loader2
+                            size={14}
+                            className="animate-spin"
+                          />
+                        ) : (
+                          <Archive size={14} />
+                        )}
+                        Archive
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
             ))}

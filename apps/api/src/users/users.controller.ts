@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
@@ -23,8 +24,12 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  findCustomers() {
-    return this.usersService.findCustomers();
+  findCustomers(
+    @Query("includeArchived") includeArchived?: string,
+  ) {
+    return this.usersService.findCustomers(
+      includeArchived === "true",
+    );
   }
 
   @Post()
@@ -39,4 +44,15 @@ export class UsersController {
   ) {
     return this.usersService.updateCustomer(id, dto);
   }
+
+  @Patch(":id/archive")
+  archiveCustomer(@Param("id") id: string) {
+    return this.usersService.archiveCustomer(id);
+  }
+
+  @Patch(":id/restore")
+  restoreCustomer(@Param("id") id: string) {
+    return this.usersService.restoreCustomer(id);
+  }
+
 }
