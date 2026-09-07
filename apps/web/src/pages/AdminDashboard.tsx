@@ -24,6 +24,7 @@ import {
   getVehicles,
 } from "../lib/api";
 import { getStoredUser } from "../lib/auth";
+import { getMaintenanceReminders } from "../lib/maintenance";
 
 function formatMoney(value: string | number) {
   return new Intl.NumberFormat("en-TZ", {
@@ -219,12 +220,47 @@ export function AdminDashboard() {
     [todayBookings],
   );
 
+  const maintenanceReminders = useMemo(
+    () => getMaintenanceReminders(vehicles, today),
+    [vehicles, today],
+  );
+
   const alerts = useMemo(() => {
     const items: {
       title: string;
       description: string;
       tone: "warning" | "danger" | "info" | "success";
     }[] = [];
+
+    const overdueMaintenance =
+      maintenanceReminders.filter(
+        (reminder) => reminder.tone === "danger",
+      );
+
+    const upcomingMaintenance =
+      maintenanceReminders.filter(
+        (reminder) => reminder.tone !== "danger",
+      );
+
+    if (overdueMaintenance.length > 0) {
+      items.push({
+        title: `${overdueMaintenance.length} overdue maintenance alert${
+          overdueMaintenance.length === 1 ? "" : "s"
+        }`,
+        description: overdueMaintenance[0].description,
+        tone: "danger",
+      });
+    }
+
+    if (upcomingMaintenance.length > 0) {
+      items.push({
+        title: `${upcomingMaintenance.length} upcoming service reminder${
+          upcomingMaintenance.length === 1 ? "" : "s"
+        }`,
+        description: upcomingMaintenance[0].description,
+        tone: "warning",
+      });
+    }
 
     if (bookingStats.pending > 0) {
       items.push({
@@ -280,6 +316,7 @@ export function AdminDashboard() {
     bookingStats.paymentAttention,
     driverStats.unavailable,
     fleetStats.maintenance,
+    maintenanceReminders,
   ]);
 
   const firstName = user?.name?.split(" ")[0] || "Admin";

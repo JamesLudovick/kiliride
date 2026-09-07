@@ -37,6 +37,11 @@ export class UpdateVehicleDto {
   color?: string;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  currentMileage?: number;
+
+  @IsOptional()
   @IsEnum(VehicleType)
   type?: VehicleType;
 }

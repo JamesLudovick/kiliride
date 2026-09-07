@@ -32,6 +32,11 @@ export class CreateVehicleDto {
   @Length(1, 30)
   color?: string;
 
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  currentMileage?: number;
+
   @IsEnum(VehicleType)
   type: VehicleType;
 }

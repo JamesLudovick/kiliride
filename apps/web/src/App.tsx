@@ -10,6 +10,7 @@ import { DriversPage } from "./pages/DriversPage";
 import { BookingsPage } from "./pages/BookingsPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
+import { MaintenancePage } from "./pages/MaintenancePage";
 import { LoginPage } from "./pages/LoginPage";
 
 import {
@@ -108,6 +109,15 @@ function App() {
         element={
           <OperationsPage>
             <PaymentsPage />
+          </OperationsPage>
+        }
+      />
+
+      <Route
+        path="/dashboard/maintenance"
+        element={
+          <OperationsPage>
+            <MaintenancePage />
           </OperationsPage>
         }
       />

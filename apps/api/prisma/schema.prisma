@@ -81,10 +81,9 @@ model DriverProfile {
   licenseNumber String
   availability  DriverAvailability @default(AVAILABLE)
 
-  bookings Booking[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@map("driver_profiles")
 }
@@ -225,6 +224,54 @@ model Payment {
   @@map("payments")
 }
 
+enum MaintenanceType {
+  ROUTINE_SERVICE
+  REPAIR
+  INSPECTION
+  TYRE_SERVICE
+  BATTERY
+  BODYWORK
+  OTHER
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model MaintenanceRecord {
+  id String @id @default(cuid())
+
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+
+  type   MaintenanceType
+  status MaintenanceStatus @default(SCHEDULED)
+
+  serviceDate DateTime
+  mileage     Int?
+  cost        Decimal? @db.Decimal(12, 2)
+
+  provider    String?
+  description String?
+
+  nextServiceDate    DateTime?
+  nextServiceMileage Int?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vehicleId])
+  @@index([status])
+  @@index([serviceDate])
+  @@index([nextServiceDate])
+  @@map("maintenance_records")
+}
+
 model Vehicle {
   id                 String        @id @default(cuid())
   registrationNumber String        @unique
@@ -234,8 +281,10 @@ model Vehicle {
   color              String?
   type               VehicleType
   status             VehicleStatus @default(AVAILABLE)
+  currentMileage     Int?
 
-  bookings Booking[]
+  bookings           Booking[]
+  maintenanceRecords MaintenanceRecord[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

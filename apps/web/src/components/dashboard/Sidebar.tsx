@@ -48,16 +48,17 @@ const managementNavigation = [
     href: "/dashboard/payments",
     icon: CircleDollarSign,
   },
+  {
+    label: "Maintenance",
+    href: "/dashboard/maintenance",
+    icon: Wrench,
+  },
 ];
 
 const comingSoon = [
   {
     label: "Calendar",
     icon: CalendarRange,
-  },
-  {
-    label: "Maintenance",
-    icon: Wrench,
   },
 ];
 

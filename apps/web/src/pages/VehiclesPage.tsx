@@ -20,6 +20,7 @@ import {
   Vehicle,
 } from "../lib/api";
 import { getStoredUser } from "../lib/auth";
+import { NavLink } from "react-router-dom";
 
 const vehicleTypes: Vehicle["type"][] = [
   "SEDAN",
@@ -32,6 +33,11 @@ const vehicleStatuses: Vehicle["status"][] = [
   "AVAILABLE",
   "ON_TRIP",
   "MAINTENANCE",
+  "INACTIVE",
+];
+
+const manualVehicleStatuses: Vehicle["status"][] = [
+  "AVAILABLE",
   "INACTIVE",
 ];
 
@@ -55,6 +61,7 @@ export function VehiclesPage() {
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
   const [color, setColor] = useState("");
+  const [currentMileage, setCurrentMileage] = useState("");
   const [type, setType] = useState<Vehicle["type"]>("SUV");
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -89,6 +96,11 @@ export function VehiclesPage() {
     setModel(vehicle.model);
     setYear(String(vehicle.year));
     setColor(vehicle.color ?? "");
+    setCurrentMileage(
+      vehicle.currentMileage !== null
+        ? String(vehicle.currentMileage)
+        : "",
+    );
     setType(vehicle.type);
     setError("");
     setShowForm(true);
@@ -107,6 +119,9 @@ export function VehiclesPage() {
         model,
         year: Number(year),
         color,
+        ...(currentMileage && {
+          currentMileage: Number(currentMileage),
+        }),
         type,
       });
 
@@ -115,6 +130,7 @@ export function VehiclesPage() {
       setModel("");
       setYear("");
       setColor("");
+      setCurrentMileage("");
       setType("SUV");
       setShowForm(false);
 
@@ -135,6 +151,7 @@ export function VehiclesPage() {
     setModel("");
     setYear("");
     setColor("");
+    setCurrentMileage("");
     setType("SUV");
     setError("");
     setShowForm(false);
@@ -157,6 +174,9 @@ export function VehiclesPage() {
         model,
         year: Number(year),
         color: color || undefined,
+        ...(currentMileage && {
+          currentMileage: Number(currentMileage),
+        }),
         type,
       });
 
@@ -499,6 +519,23 @@ export function VehiclesPage() {
             </label>
 
             <label className="kr-label">
+              Current mileage
+              <input
+                className="kr-input"
+                type="number"
+                min="0"
+                placeholder="e.g. 88500"
+                value={currentMileage}
+                onChange={(event) =>
+                  setCurrentMileage(event.target.value)
+                }
+              />
+              <span className="kr-help">
+                Current odometer reading in kilometres
+              </span>
+            </label>
+
+            <label className="kr-label">
               Vehicle type *
               <select
                 className="kr-select"
@@ -686,26 +723,40 @@ export function VehiclesPage() {
                       </div>
                     </div>
 
-                    <select
-                      className={`max-w-[135px] rounded-full border-0 px-2.5 py-1.5 text-[11px] font-bold outline-none ${statusStyles[vehicle.status]}`}
-                      value={vehicle.status}
-                      onChange={(event) =>
-                        void handleStatusChange(
-                          vehicle.id,
-                          event.target.value as Vehicle["status"],
-                        )
-                      }
-                    >
-                      {vehicleStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status.replace("_", " ")}
-                        </option>
-                      ))}
-                    </select>
+                    {vehicle.status === "MAINTENANCE" ||
+                    vehicle.status === "ON_TRIP" ? (
+                      <span
+                        className={`max-w-[145px] rounded-full px-2.5 py-1.5 text-[11px] font-bold ${statusStyles[vehicle.status]}`}
+                        title={
+                          vehicle.status === "MAINTENANCE"
+                            ? "Controlled by the Maintenance workspace"
+                            : "Controlled by the booking lifecycle"
+                        }
+                      >
+                        {vehicle.status.replace("_", " ")}
+                      </span>
+                    ) : (
+                      <select
+                        className={`max-w-[135px] rounded-full border-0 px-2.5 py-1.5 text-[11px] font-bold outline-none ${statusStyles[vehicle.status]}`}
+                        value={vehicle.status}
+                        onChange={(event) =>
+                          void handleStatusChange(
+                            vehicle.id,
+                            event.target.value as Vehicle["status"],
+                          )
+                        }
+                      >
+                        {manualVehicleStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {status.replace("_", " ")}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 border-b border-slate-100 sm:grid-cols-4 sm:divide-y-0">
                   <div className="px-4 py-3.5">
                     <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
                       Type
@@ -732,6 +783,16 @@ export function VehiclesPage() {
                       {vehicle.color || "—"}
                     </p>
                   </div>
+                  <div className="px-4 py-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Mileage
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-700">
+                      {vehicle.currentMileage !== null
+                        ? `${vehicle.currentMileage.toLocaleString()} km`
+                        : "—"}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 p-4">
@@ -751,6 +812,14 @@ export function VehiclesPage() {
                   </div>
 
                   <div className="flex items-center gap-1">
+                    <NavLink
+                      to="/dashboard/maintenance"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-amber-700 transition hover:bg-amber-50"
+                    >
+                      <Wrench size={14} />
+                      Service
+                    </NavLink>
+
                     <button
                       className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-primary"
                       onClick={() => startEditing(vehicle)}

@@ -139,6 +139,51 @@ export function logout() {
   });
 }
 
+export type MaintenanceType =
+  | "ROUTINE_SERVICE"
+  | "REPAIR"
+  | "INSPECTION"
+  | "TYRE_SERVICE"
+  | "BATTERY"
+  | "BODYWORK"
+  | "OTHER";
+
+export type MaintenanceStatus =
+  | "SCHEDULED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export interface MaintenanceRecord {
+  id: string;
+  vehicleId: string;
+  type: MaintenanceType;
+  status: MaintenanceStatus;
+  serviceDate: string;
+  mileage: number | null;
+  cost: string | number | null;
+  provider: string | null;
+  description: string | null;
+  nextServiceDate: string | null;
+  nextServiceMileage: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMaintenanceInput {
+  type: MaintenanceType;
+  status?: MaintenanceStatus;
+  serviceDate: string;
+  mileage?: number;
+  cost?: number;
+  provider?: string;
+  description?: string;
+  nextServiceDate?: string;
+  nextServiceMileage?: number;
+  notes?: string;
+}
+
 export interface Vehicle {
   id: string;
   registrationNumber: string;
@@ -148,6 +193,8 @@ export interface Vehicle {
   color: string | null;
   type: "SEDAN" | "SUV" | "VAN" | "PICKUP";
   status: "AVAILABLE" | "ON_TRIP" | "MAINTENANCE" | "INACTIVE";
+  currentMileage: number | null;
+  maintenanceRecords?: MaintenanceRecord[];
   createdAt: string;
   updatedAt: string;
 }
@@ -158,6 +205,7 @@ export interface CreateVehicleInput {
   model: string;
   year: number;
   color?: string;
+  currentMileage?: number;
   type: Vehicle["type"];
 }
 
@@ -190,6 +238,33 @@ export function updateVehicleStatus(
     method: "PATCH",
     body: JSON.stringify({ status }),
   });
+}
+
+export function createVehicleMaintenance(
+  vehicleId: string,
+  data: CreateMaintenanceInput,
+) {
+  return authenticatedRequest<MaintenanceRecord>(
+    `/vehicles/${vehicleId}/maintenance`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export function updateVehicleMaintenanceStatus(
+  vehicleId: string,
+  maintenanceId: string,
+  status: MaintenanceStatus,
+) {
+  return authenticatedRequest<MaintenanceRecord>(
+    `/vehicles/${vehicleId}/maintenance/${maintenanceId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    },
+  );
 }
 
 export function deleteVehicle(id: string) {

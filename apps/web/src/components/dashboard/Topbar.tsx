@@ -26,6 +26,10 @@ const pageDetails: Record<
     title: "Payments",
     description: "Track collections, balances and payment history.",
   },
+  "/dashboard/maintenance": {
+    title: "Maintenance",
+    description: "Manage fleet servicing, repairs and maintenance history.",
+  },
   "/dashboard/vehicles": {
     title: "Vehicles",
     description: "Manage fleet vehicles and availability.",

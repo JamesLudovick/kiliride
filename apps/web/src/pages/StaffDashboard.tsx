@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Sparkles,
+  Wrench,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -25,6 +26,12 @@ const quickActions = [
     description: "Manage driver availability and assignments.",
     href: "/dashboard/drivers",
     icon: ShieldCheck,
+  },
+  {
+    title: "Maintenance",
+    description: "Review service schedules and fleet maintenance.",
+    href: "/dashboard/maintenance",
+    icon: Wrench,
   },
 ];
 
@@ -57,7 +64,7 @@ export function StaffDashboard() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {quickActions.map((item) => {
             const Icon = item.icon;
 
