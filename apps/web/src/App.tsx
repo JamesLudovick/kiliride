@@ -16,6 +16,7 @@ import { ReportsPage } from "./pages/ReportsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { CustomerAccountPage } from "./pages/CustomerAccountPage";
+import { DriverPortalPage } from "./pages/DriverPortalPage";
 
 import {
   getStoredUser,
@@ -34,6 +35,28 @@ function RequireStaffOrAdmin({ children }: ProtectedRouteProps) {
   }
 
   if (!isStaffOrAdmin(user)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function RequireDriver({ children }: ProtectedRouteProps) {
+  const user = getStoredUser();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "DRIVER") {
+    if (isStaffOrAdmin(user)) {
+      return <Navigate to="/dashboard" replace />;
+    }
+
+    if (user.role === "CUSTOMER") {
+      return <Navigate to="/account" replace />;
+    }
+
     return <Navigate to="/" replace />;
   }
 
@@ -107,6 +130,15 @@ function App() {
           <RequireCustomer>
             <CustomerAccountPage />
           </RequireCustomer>
+        }
+      />
+
+      <Route
+        path="/driver"
+        element={
+          <RequireDriver>
+            <DriverPortalPage />
+          </RequireDriver>
         }
       />
 

@@ -350,6 +350,28 @@ export function updateDriverAvailability(
 }
 
 
+export function getDriverPortalProfile() {
+  return authenticatedRequest<Driver>("/driver-portal/me");
+}
+
+export function getDriverPortalBookings() {
+  return authenticatedRequest<Booking[]>("/driver-portal/bookings");
+}
+
+export function updateDriverPortalBookingStatus(
+  bookingId: string,
+  status: "IN_PROGRESS" | "COMPLETED",
+) {
+  return authenticatedRequest<Booking>(
+    `/driver-portal/bookings/${bookingId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    },
+  );
+}
+
+
 
 export interface Customer {
   id: string;

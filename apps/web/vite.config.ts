@@ -20,6 +20,10 @@ export default defineConfig({
         target: "http://api:4000",
         changeOrigin: true,
       },
+      "/driver-portal": {
+        target: "http://api:4000",
+        changeOrigin: true,
+      },
       "/bookings": {
         target: "http://api:4000",
         changeOrigin: true,
@@ -36,4 +40,3 @@ export default defineConfig({
     },
   },
 });
-

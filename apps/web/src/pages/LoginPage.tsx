@@ -79,7 +79,9 @@ export function LoginPage() {
           ? "/dashboard"
           : auth.user.role === "CUSTOMER"
             ? "/account"
-            : "/";
+            : auth.user.role === "DRIVER"
+              ? "/driver"
+              : "/";
     } catch (error) {
       setError(
         error instanceof Error

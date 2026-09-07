@@ -104,6 +104,7 @@ const journeySteps = [
 export function PublicHome() {
   const user = getStoredUser();
   const staffUser = isStaffOrAdmin(user);
+  const driverUser = user?.role === "DRIVER";
 
   async function handleSignOut() {
     try {
@@ -204,7 +205,7 @@ export function PublicHome() {
               </Link>
             ) : (
               <Link
-                to="/account"
+                to={driverUser ? "/driver" : "/account"}
                 className="inline-flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-white transition hover:bg-white/10"
               >
                 <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#d6a84f] text-xs font-black text-[#073b2e]">
@@ -213,7 +214,7 @@ export function PublicHome() {
 
                 <div className="hidden text-left sm:block">
                   <p className="text-[10px] text-white/45">
-                    My account
+                    {driverUser ? "Driver portal" : "My account"}
                   </p>
                   <p className="text-xs font-bold">
                     {firstName}
@@ -271,13 +272,15 @@ export function PublicHome() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               ) : (
-                <a
-                  href="#services"
+                <Link
+                  to={driverUser ? "/driver" : "/account"}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#087456] px-6 text-sm font-bold text-white shadow-lg shadow-emerald-950/15"
                 >
-                  Explore KiliRide
+                  {driverUser
+                    ? "Open driver portal"
+                    : "Open my account"}
                   <ArrowRight className="h-4 w-4" />
-                </a>
+                </Link>
               )}
 
               <a
